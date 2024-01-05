@@ -1,4 +1,9 @@
 # Neuroimaging processing pipelines
+## Folder descriptions
+- `generic` - contains scripts that can be universally used for human and animal imaging datasets
+- `human` - scripts related to human analysis, prioritizing 7T based analysis
+- `mouse` - scripts for processing mouse datasets, typically adjusting for sizing differences between subjects and scanners as compared to human
+
 ## Steps used in all pipelines
 - Organizing data into BIDS format, using the following 4 main folders:
     - `code` - contains all of the unique code used to process your data
