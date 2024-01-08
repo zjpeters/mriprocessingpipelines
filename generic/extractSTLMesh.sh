@@ -24,8 +24,8 @@ else
 fi
 echo "Converting surface files to stl format"
 # convert lh.pial and rh.pial to stl and name as cortical.stl
-mris_convert $SUBJECTS_DIR/${subject}/surf/lh.pial $meshDir/${subject}_right_cortical.stl
-mris_convert $SUBJECTS_DIR/${subject}/surf/rh.pial $meshDir/${subject}_left_cortical.stl
+mris_convert $SUBJECTS_DIR/${subject}/surf/lh.pial* $meshDir/${subject}_right_cortical.stl
+mris_convert $SUBJECTS_DIR/${subject}/surf/rh.pial* $meshDir/${subject}_left_cortical.stl
 
 # extract subcortical regions
 mri_convert $SUBJECTS_DIR/${subject}/mri/aseg.mgz $meshDir/${subject}_aseg.nii.gz -it mgz -ot nii
