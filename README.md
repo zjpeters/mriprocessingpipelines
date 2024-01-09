@@ -18,15 +18,24 @@
     - Mask creation can also be done by hand using tools such as `BrainSuite`
     - Can be created before or after image registration, depending the data requirements
 ## MRI processing pipeline
-- Basic set of scripts to be used when processing MRI data
+Basic set of scripts to be used when processing MRI data
 1. `generic/dicomDownload.sh` - will download all data from the given XNAT project and store it in the given `sourcedata` location
 2. `generic/dicomToNiftiOrganize.sh` - searches for dicom files within the given `sourcedata` folder and outputs them to the given `rawdata` folder using BIDS format. *may need to update `-f` option to get the filenames correct, as well as add to modalities in the case functionality*
 3. `generic/createParticipantsTsv.sh` - uses the naming of the folders within `rawdata` to generate a participants.tsv file within the rawdata folder and a sessions.tsv within each subject folder
+
+## Anatomical/structural processing steps
+Scripts to use with anatomical data
+4. `human/anat/process7TAnat` - given a T1w image and a `derivatives` location, performs basic processing of:
+    - resampling into RPI orientation
+    - Rician denoising
+    - registration to MNI 152 0.5mm template image
+    - bias field correction (currently done after the registration to allow the use of the template mask as a guide for BF correction)
+    - runs Freesurfer pipeline on processed data
+5. `human/anat/extractSTLMesh.sh` & `human/anat/extractSTLMeshFromProcessed.sh` - creates 3D printable STL files from Freesurfer surface data. `extractSTLMesh` performs basic processing followed by freesurfer before creating files, `...FromProcessed` uses the freesurfer data from an already processed dataset.
 ## DWI processing steps
+Scripts to be used with DWI data
 4. `dwi/003_nonlinearDistortionCorrection.sh` - uses a t2w anatomical image (chosen because of intensity similarity) to correct for distortion as a result of the spin echo as well as run BET and DTIfit
-
-## Anat/structural processing steps
-
+## Functional MRI processing steps
 # Useful links
 [Brain Imaging Data Structure (BIDS)](https://bids.neuroimaging.io/)
 

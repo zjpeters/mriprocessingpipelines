@@ -1,7 +1,7 @@
 #!/bin/bash
 # Requirements: dcm2niix, afni
 helpRequest() {
-    [ "$#" -le "1" ] && [ "$1" = '-h' ] || [ "$1" = '-help' ]
+    [ "$#" -le "1" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
 }
 if helpRequest "$@"; then
     echo "Usage: `basename $0` {sourcedata} {rawdata}"
@@ -52,13 +52,7 @@ dicomToNiftiOrganize() {
                             * ) mv ${jsonFile//.json/}* $rawdata/$subID/$sesID/other
                         esac
                     fi
-                done
-                # mv ${folder}/*FIESTA*  $rawdata/$subID/$sesID/anat/
-                # mv ${folder}/*fMRI*  $rawdata/$subID/$sesID/func/
-                # mv ${folder}/*32DIR* $rawdata/$subID/$sesID/dwi/
-                # mv ${folder}/*.nii.gz $rawdata/$subID/$sesID/other
-                # mv ${folder}/*.json $rawdata/$subID/$sesID/other
-                
+                done                
             fi
         fi
     done
