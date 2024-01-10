@@ -7,18 +7,26 @@ subjectID=$1
 SUBJECT_FREESURFER=$2
 meshDir=$3
 #create subject directory for freesurfer data
-if [ ! -f $SUBJECT_FREESURFER/surf/lh.pial* ]; then
+if [ -f $SUBJECT_FREESURFER/surf/lh.pial ]; then
+    pialType=pial
+elif [ -f $SUBJECT_FREESURFER/surf/lh.pial.T1 ]; then
+    pialType=pial.T1
+else
     echo "No pial files found for $subjectID in:"
-    echo "$SUBJECT_FREESURFER"
+    echo "$SURBJECT_FREESURFER"
     exit 1;
 fi
 if [ ! -d $meshDir/${subjectID} ]; then
   mkdir -p $meshDir/${subjectID}
+else
+  echo "STL files have already been created for $subjectID in:"
+  echo "$meshDir/${subjectID}"
+  exit 0;
 fi
 echo "Converting surface files to stl format"
 # convert lh.pial and rh.pial to stl and name as cortical.stl
-mris_convert ${SUBJECT_FREESURFER}/surf/lh.pial* $meshDir/${subjectID}/${subjectID}_left_cortical.stl
-mris_convert ${SUBJECT_FREESURFER}/surf/rh.pial* $meshDir/${subjectID}/${subjectID}_right_cortical.stl
+mris_convert ${SUBJECT_FREESURFER}/surf/lh.${pialType} $meshDir/${subjectID}/${subjectID}_left_cortical.stl
+mris_convert ${SUBJECT_FREESURFER}/surf/rh.${pialType} $meshDir/${subjectID}/${subjectID}_right_cortical.stl
 
 # extract subcortical regions
 mri_convert ${SUBJECT_FREESURFER}/mri/aseg.mgz $meshDir/${subjectID}/${subjectID}_aseg.nii.gz -it mgz -ot nii
