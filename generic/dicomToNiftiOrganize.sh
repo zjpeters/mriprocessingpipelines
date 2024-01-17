@@ -13,24 +13,23 @@ fi
 shopt -s nocasematch
 
 dicomToNiftiOrganize() {
-    sourcedata=${1}
-    rawdata=${2:-${sourcedata//sourcedata/rawdata}}
-    for folder in $sourcedata/*; do
-        #cd $sourcedata
-        if [ -d $folder ]; then
-            cd $folder
+    sourcedata="${1}"
+    rawdata="${2:-${sourcedata//sourcedata/rawdata}}"
+    for folder in "$sourcedata"/*; do
+        if [ -d "$folder" ]; then
+            cd "$folder"
             # look through the folder to find the first dicom file and collect subject and session info
             dcmFilename=$(find -type f -name "*.dcm" | head -n 1)
             # the following lines use dicom_hdr from afni with grep to find names and dates
-            subID=$(dicom_hdr $dcmFilename | grep "0010 0010")
+            subID=$(dicom_hdr "$dcmFilename" | grep "0010 0010")
             subID=${subID//*Name\/\//sub-}
-            sesDate=$(dicom_hdr $dcmFilename | grep "0008 0023")
+            sesDate=$(dicom_hdr "$dcmFilename" | grep "0008 0023")
             sesDate=${sesDate//*Date\/\//}
-            sesTime=$(dicom_hdr $dcmFilename | grep "0008 0030")
+            sesTime=$(dicom_hdr "$dcmFilename" | grep "0008 0030")
             sesTime=${sesTime//*Time\/\//}
             sesID=ses-${sesDate}${sesTime}
             # checks whether data has already been converted for this particular session
-            if [ -d ${rawdata}/${subID}/${sesID} ]; then
+            if [ -d "${rawdata}/${subID}/${sesID}" ]; then
                 echo "Files have already been converted for ${subID}_${sesID}, check:\
                 ${rawdata}/${subID}/${sesID}"
             elif [ "${sesID}" == "ses-" ]; then
@@ -40,16 +39,16 @@ dicomToNiftiOrganize() {
                 echo "dcm2niix -d 9 -b y -z y -i y -f sub-%n_ses-%t_%d ${folder}/scans/ ${sourcedata}"
                 dcm2niix -d 9 -b y -z y -i y -f sub-%n_ses-%t_%d .
                 # begin formatting for BIDS
-                mkdir -p $rawdata/$subID/$sesID/{anat,dwi,func,other}
+                mkdir -p "$rawdata/$subID/$sesID/{anat,dwi,func,other}"
                 for jsonFile in *.json; do
                     if [ -f $jsonFile ]; then
                         modality=${jsonFile##*${sesID}}
                         modality=${modality//.json/}
                         case $modality in
-                            *fiesta* | *mprage* | *t1* | *t2* ) mv ${jsonFile//.json/}* $rawdata/$subID/$sesID/anat/ ;;
-                            *fmri* | *func* | *rest* ) mv ${jsonFile//.json/}* $rawdata/$subID/$sesID/func/ ;;
-                            *dwi* | *dti* | *32dir* | *32_dir* ) mv ${jsonFile//.json/}* $rawdata/$subID/$sesID/dwi/ ;;
-                            * ) mv ${jsonFile//.json/}* $rawdata/$subID/$sesID/other
+                            *fiesta* | *mprage* | *t1* | *t2* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/anat/" ;;
+                            *fmri* | *func* | *rest* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/func/" ;;
+                            *dwi* | *dti* | *32dir* | *32_dir* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/dwi/" ;;
+                            * ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/other"
                         esac
                     fi
                 done                
