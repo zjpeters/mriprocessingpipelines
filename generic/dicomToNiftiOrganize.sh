@@ -14,12 +14,12 @@ shopt -s nocasematch
 
 dicomToNiftiOrganize() {
     sourcedata="${1}"
-    rawdata="${2:-${sourcedata//sourcedata/rawdata}}"
+    rawdata="${2:-"${sourcedata//sourcedata/rawdata}"}"
     for folder in "$sourcedata"/*; do
         if [ -d "$folder" ]; then
             cd "$folder"
             # look through the folder to find the first dicom file and collect subject and session info
-            dcmFilename=$(find -name "*.dcm" | head -n 1)
+            dcmFilename=$(find . -name "*.dcm" | head -n 1)
             # the following lines use dicom_hdr from afni with grep to find names and dates
             subID=$(dicom_hdr "$dcmFilename" | grep "0010 0010")
             subID=${subID//*Name\/\//sub-}
