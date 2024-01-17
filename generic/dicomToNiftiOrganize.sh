@@ -19,7 +19,7 @@ dicomToNiftiOrganize() {
         if [ -d "$folder" ]; then
             cd "$folder"
             # look through the folder to find the first dicom file and collect subject and session info
-            dcmFilename=$(find -type f -name "*.dcm" | head -n 1)
+            dcmFilename=$(find -name "*.dcm" | head -n 1)
             # the following lines use dicom_hdr from afni with grep to find names and dates
             subID=$(dicom_hdr "$dcmFilename" | grep "0010 0010")
             subID=${subID//*Name\/\//sub-}
