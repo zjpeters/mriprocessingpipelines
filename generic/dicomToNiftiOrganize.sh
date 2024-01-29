@@ -37,7 +37,7 @@ dicomToNiftiOrganize() {
             else
                 echo "Converting dicom to nifti for ${subID} ${sesID}"
                 echo "dcm2niix -d 9 -b y -z y -i y -f sub-%n_ses-%t_%d ${folder}/scans/ ${sourcedata}"
-                dcm2niix -d 9 -b y -z y -i y -f sub-%n_ses-%t_%d .
+                dcm2niix_afni -d 9 -b y -z y -i y -f sub-%n_ses-%t_%d .
                 # begin formatting for BIDS
                 mkdir -p "$rawdata/$subID/$sesID/{anat,dwi,func,other}"
                 for jsonFile in *.json; do
