@@ -5,21 +5,21 @@ if [ $# != 1 ] ; then
   exit 0;
 fi
 
-rawdata=$1
-if [ -f ${rawdata}/participants.tsv ]; then
+rawdata="$(realpath "${1}")"
+if [ -f "${rawdata}"/participants.tsv ]; then
     echo "participants.tsv already exists!"
     exit 1
 else
-    touch ${rawdata}/participants.tsv
-    echo -e "participant_id" > ${rawdata}/participants.tsv
-    for subject in ${rawdata}/sub-*; do
-        subID=$(basename $subject)
-        echo -e "$subID" >> ${rawdata}/participants.tsv
-        touch ${subject}/sessions.tsv
-        echo -e "session_id" > ${subject}/sessions.tsv
+    touch "${rawdata}"/participants.tsv
+    echo -e "participant_id" > "${rawdata}"/participants.tsv
+    for subject in "${rawdata}"/sub-*; do
+        subID="$(basename $subject)"
+        echo -e "$subID" >> "${rawdata}"/participants.tsv
+        touch "${subject}"/sessions.tsv
+        echo -e "session_id" > "${subject}"/sessions.tsv
         for session in ${subject}/ses-*; do
-            sesID=$(basename $session)
-            echo -e "$sesID" >> ${subject}/sessions.tsv
+            sesID="$(basename $session)"
+            echo -e "$sesID" >> "${subject}"/sessions.tsv
         done
     done
 fi
