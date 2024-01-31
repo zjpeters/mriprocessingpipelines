@@ -13,8 +13,8 @@ fi
 shopt -s nocasematch
 
 dicomToNiftiOrganize() {
-    sourcedata="${1}"
-    rawdata="${2:-"${sourcedata//sourcedata/rawdata}"}"
+    sourcedata="$(realpath "${1}")"
+    rawdata="$(realpath "${2:-"${sourcedata//sourcedata/rawdata}"}")"
     for folder in "$sourcedata"/*; do
         if [ -d "$folder" ]; then
             cd "$folder"
