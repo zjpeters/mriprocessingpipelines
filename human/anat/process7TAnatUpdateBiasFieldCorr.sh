@@ -22,13 +22,15 @@ modality=${modality%%.nii.gz}
 outputFolder=${derivatives}/${participant_id}
 SUBJECTS_DIR=$outputFolder
 outputNameBase=${derivatives}/${participant_id}/${participant_id}_${session_id}_${modality}
-if [ ! -d $outputFolder ]; then
-  mkdir $outputFolder
+if [ ! -f ${outputNameBase}_reorient_RPI_denoise_coreg_bfcorr.nii.gz ]; then
+  if [ ! -d $outputFolder ]; then
+    mkdir $outputFolder
+  fi
   echo "Resampling $filename into RPI"
   3dresample -orient rpi -overwrite -prefix ${outputNameBase}_reorient_RPI.nii.gz -input $inputScan
   # not including mask in denoising since it hasn't been generated yet
   echo "Denoising $filename"
-  DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${outputNameBase}_reorient_RPI.nii.gz -o [${outputNameBase}_reorient_RPI_denoise.nii.gz,${outputNameBase}_reorient_RPI_noise.nii.gz]
+  DenoiseImage -d 3 -n Rician -s 1 -p 2 -r 3 -v 1 -i ${outputNameBase}_reorient_RPI.nii.gz -o [${outputNameBase}_reorient_RPI_denoise.nii.gz,${outputNameBase}_reorient_RPI_noise.nii.gz]
   # run antsRegistration on data
   echo "Registering $filename to $template"
   antsRegistration --dimensionality 3 --output ${outputNameBase}_coreg --initial-moving-transform [${template},${outputNameBase}_reorient_RPI_denoise.nii.gz,1] \

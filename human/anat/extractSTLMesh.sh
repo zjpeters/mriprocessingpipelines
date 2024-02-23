@@ -16,7 +16,7 @@ if [ ! -d $SUBJECTS_DIR/${subject}/mri/orig ]; then
 
   # run recon-all on the subject
   mri_convert $tempDir/t1Subsamp.nii.gz $SUBJECTS_DIR/${subject}/mri/orig/001.mgz
-  rm $tempDir/t1Subsamp.nii.gz
+  rm -r $tempDir
   recon-all -subjid ${subject} -all -time -log logfile -sd $SUBJECTS_DIR -parallel
 
 else
