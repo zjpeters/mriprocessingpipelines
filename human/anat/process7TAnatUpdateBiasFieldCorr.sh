@@ -22,8 +22,10 @@ modality=${modality%%.nii.gz}
 outputFolder=${derivatives}/${participant_id}
 SUBJECTS_DIR=$outputFolder
 outputNameBase=${derivatives}/${participant_id}/${participant_id}_${session_id}_${modality}
-if [ ! -d $outputFolder ]; then
-  mkdir $outputFolder
+if [ ! -f ${outputNameBase}_reorient_RPI_denoise_coreg_bfcorr.nii.gz ]; then
+  if [ ! -d $outputFolder ]; then
+    mkdir $outputFolder
+  fi
   echo "Resampling $filename into RPI"
   3dresample -orient rpi -overwrite -prefix ${outputNameBase}_reorient_RPI.nii.gz -input $inputScan
   # not including mask in denoising since it hasn't been generated yet
