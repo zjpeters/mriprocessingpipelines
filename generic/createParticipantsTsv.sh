@@ -17,7 +17,7 @@ else
         echo -e "$subID" >> "${rawdata}"/participants.tsv
         touch "${subject}"/sessions.tsv
         echo -e "session_id" > "${subject}"/sessions.tsv
-        for session in ${subject}/ses-*; do
+        for session in "${subject}"/ses-*; do
             sesID="$(basename "${session}")"
             echo -e "$sesID" >> "${subject}"/sessions.tsv
         done
