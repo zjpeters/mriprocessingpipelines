@@ -29,11 +29,13 @@ if [ ! -f ${outputNameBase}_reorient_RPI_denoise_coreg_bfcorr.nii.gz ]; then
   echo "Resampling $filename into RPI"
   3dresample -orient rpi -overwrite -prefix ${outputNameBase}_reorient_RPI.nii.gz -input $inputScan
   # not including mask in denoising since it hasn't been generated yet
-  echo "Denoising $filename"
+
   # general N4 command used
   echo "Running bias field correction on $filename"
-  N4BiasFieldCorrection -d 3 -i ${outputNameBase}_reorient_RPI.nii.gz -x ${templateMask} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -o [${outputNameBase}_reorient_RPI_bfcorr.nii.gz,${outputNameBase}_reorient_RPI_bf.nii.gz]
+  # updated from -b [50,3] with no -t
+  N4BiasFieldCorrection -d 3 -i ${outputNameBase}_reorient_RPI.nii.gz -x ${templateMask} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${outputNameBase}_reorient_RPI_bfcorr.nii.gz,${outputNameBase}_reorient_RPI_bf.nii.gz]
 
+  echo "Denoising $filename"
   DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${outputNameBase}_reorient_RPI_bfcorr.nii.gz -o [${outputNameBase}_reorient_RPI_bfcorr_denoise.nii.gz,${outputNameBase}_reorient_RPI_bfcorr_noise.nii.gz]
   # run antsRegistration on data
   echo "Registering $filename to $template"
