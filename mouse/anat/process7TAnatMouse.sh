@@ -3,7 +3,7 @@
 # need to update it so that the user inputs the dir_project
 ###################################################################################
 
-DIR_PROJECT=/Users/yfilali/Stress/Vulnerability_EF_Experiment/fMRI
+DIR_PROJECT=/media/zjpeters/Samsung_T5/marcinkiewcz/dreaddFmri
 
 if [ -f "${DIR_PROJECT}/derivatives/volume_cohort2_VEF.tsv" ]; then
   rm "${DIR_PROJECT}/derivatives/volume_cohort2_VEF.tsv"
@@ -58,9 +58,9 @@ while read PID SID; do
     # cp ${DIR_PREP}/${PIDSTR}_T2w.png ${DIR_ANAT}/native/${PIDSTR}_T2w.png
 
     fslmaths ${DIR_PREP}/${PIDSTR}_prep-denoise_T2w.nii.gz -mas ${MASK} ${IMG_NATIVE}
-    FIXED=${DIR_PROJECT}/template/P56_Atlas_downsample2.nii.gz
+    FIXED=/home/zjpeters/Documents/mouseDevelopmental/templates/WHS_0.5_Labels_LHRH_200um.nii.gz
     ## need to check that this is a mask and not just a skull stripped brain
-    FIXED_MASK=${DIR_PROJECT}/template/P56_brain.nii.gz
+    FIXED_MASK=/home/zjpeters/Documents/mouseDevelopmental/templates/WHS_0.5_Labels_Brain_200um.nii.gz
 
     mkdir -p ${DIR_ANAT}/reg_Allen
 
@@ -100,7 +100,7 @@ while read PID SID; do
    fi
    3dROIstats -mask ${LABEL} -nzvoxels ${IMG_NATIVE} >>${DIR_PROJECT}/summary/volume_cohort2_VEF.tsv
 
-done < ${DIR_PROJECT}/rawdata/participants.tsv
+done < ${DIR_PROJECT}/rawdata/participants_sessions.tsv
 
 
 #  summarize3D \
