@@ -16,7 +16,7 @@ scriptPath=`readlink -f $scriptPath`
 # DIR_PROJECT=/media/zjpeters/Samsung_T5/marcinkiewcz/dreaddFmri
 rawdata=$1
 derivatives=$2
-outputFilename=${3:=volume.tsv}
+# outputFilename=${3:=volume.tsv}
 # add modality as an option later
 MODALITY=FIESTA_0.2MM_ISO
 ###################################################################################
@@ -24,14 +24,22 @@ MODALITY=FIESTA_0.2MM_ISO
 ###################################################################################
 
 FIXED=${scriptPath}/templates/WHS_0.5_T1w_200um.nii.gz
-ATLAS_LABELS=${scriptPath}/WHS_0.5_Labels_LHRH_200um.nii.gz
+ATLAS_LABELS=${scriptPath}/templates/WHS_0.5_Labels_LHRH_200um.nii.gz
 ## need to check that this is a mask and not just a skull stripped brain
 FIXED_MASK=${scriptPath}/templates/WHS_0.5_Labels_Brain_200um.nii.gz
-if [ -f "${derivatives}/${outputFilename}" ]; then
-  rm "${derivatives}/${outputFilename}"
-fi
-touch "${derivatives}/${outputFilename}"
+# if [ -f "${derivatives}/${outputFilename}" ]; then
+#   rm "${derivatives}/${outputFilename}"
+# fi
+# touch "${derivatives}/${outputFilename}"
 
+DIR_SUMMARY=${derivatives}/summary
+SUMMARY_FILE=${DIR_SUMMARY}/volumes.tsv
+mkdir -p ${DIR_SUMMARY}
+if [ -f ${SUMMARY_FILE} ]; then
+      rm ${SUMMARY_FILE}
+fi
+touch ${SUMMARY_FILE}
+    
 while read PID; do
   [ "$PID" == participant_id ] && continue;  # skips the header
   while read SID; do
@@ -45,7 +53,6 @@ while read PID; do
     DIR_XFM=${DIR_ANAT}/xfm
     DIR_LABEL=${DIR_ANAT}/label
     LABEL=${DIR_ANAT}/label/${PIDSTR}_label-allen.nii.gz
-
     # XFM4=${DIR_XFM}/reg_Allen0Warp.nii.gz
     # XFM3=${DIR_XFM}/reg_Allen0InverseWarp.nii.gz
 
@@ -94,6 +101,7 @@ while read PID; do
       
       # prepare to register allen to native ------------------------------------------
       mkdir -p ${DIR_ANAT}/native
+      mkdir -p ${DIR_XFM}
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
       ## this originally had it copying the uncorrected image to use, which doesn't make sense
       # IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.nii.gz
@@ -107,7 +115,9 @@ while read PID; do
            -prefix  ${IMG_RESAMP} \
            -input ${IMG_NATIVE}
       # mkdir -p ${DIR_ANAT}/reg_Allen
-
+      3dresample -dxyz 0.2 0.2 0.2 \
+            -prefix ${MASK_RESAMP} \
+            -input ${MASK}
       ## this should be the same as the previous coregistrationChef
       ## note: I've set it to output to the ${DIR_XFM} folder, which is slightly different
       antsRegistration \
@@ -116,9 +126,9 @@ while read PID; do
         --write-composite-transform 1 \
         --collapse-output-transforms 0 \
         --initialize-transforms-per-stage 1 \
-        --transform Rigid[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform Affine[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_RESAMP},1,4] --masks [${FIXED_MASK},${MASK}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
+        --transform Rigid[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
+        --transform Affine[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
+        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_RESAMP},1,4] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
         --winsorize-image-intensities [0.005,0.995] \
         --float 1 \
         --verbose 1 \
@@ -136,12 +146,12 @@ while read PID; do
       echo "registration of ${PIDSTR} already done"
       mkdir -p ${DIR_ANAT}/label/allen
       antsApplyTransforms -d 3 -n MultiLabel \
-        -i ${DIR_PROJECT}/template/P56_Annotation_downsample2.nii.gz \
+        -i ${ATLAS_LABELS} \
         -o ${LABEL} \
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
     fi
-    3dROIstats -mask ${LABEL} -nzvoxels ${IMG_NATIVE} >>${DIR_PROJECT}/summary/volume_cohort2_VEF.tsv
+    3dROIstats -mask ${LABEL} -nzvoxels ${IMG_NATIVE} >>${DIR_SUMMARY}/volumes.tsv
   done < ${rawdata}/${PID}/sessions.tsv
 done < ${rawdata}/participants.tsv
 
