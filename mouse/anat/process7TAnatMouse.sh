@@ -11,18 +11,22 @@ if helpRequest "$@"; then
     echo "outputFilename is what you want to name your file, default is 'volume.tsv'"
     exit 0;
 fi
+scriptPath=`dirname $0`
+scriptPath=`readlink -f $scriptPath`
 # DIR_PROJECT=/media/zjpeters/Samsung_T5/marcinkiewcz/dreaddFmri
 rawdata=$1
 derivatives=$2
 outputFilename=${3:=volume.tsv}
-
+# add modality as an option later
+MODALITY=FIESTA_0.2MM_ISO
 ###################################################################################
 # need to update to a better naming for the template and mask
 ###################################################################################
 
-FIXED=/home/zjpeters/rdss_tnj/mouseDevelopmental/templates/WHS_0.5_Labels_LHRH_200um.nii.gz
+FIXED=${scriptPath}/templates/WHS_0.5_T1w_200um.nii.gz
+ATLAS_LABELS=${scriptPath}/WHS_0.5_Labels_LHRH_200um.nii.gz
 ## need to check that this is a mask and not just a skull stripped brain
-FIXED_MASK=/home/zjpeters/rdss_tnj/mouseDevelopmental/templates/WHS_0.5_Labels_Brain_200um.nii.gz
+FIXED_MASK=${scriptPath}/templates/WHS_0.5_Labels_Brain_200um.nii.gz
 if [ -f "${derivatives}/${outputFilename}" ]; then
   rm "${derivatives}/${outputFilename}"
 fi
@@ -51,14 +55,14 @@ while read PID; do
     if [ ! -f ${XFM} ]; then
       echo "beginning registration ${PIDSTR}"
 
-      mkdir -p ${DIR_PREP}
+      # mkdir -p ${DIR_PREP}
       mkdir -p ${DIR_LABEL}
 
       # gather raw images and remove extraneous BIDS flags ---------------------------
       ## rewrite to include only run flag
       ## set image list (order of priority determined by MODLS and BIDS flags
-      IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_T2w.nii.gz
-      # IMG=${DIR_PREP}/${PIDSTR}_T2w.nii.gz
+      IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
+      # IMG=${DIR_PREP}/${PIDSTR}_${MODALITY}.nii.gz
       # cp ${IMG_RAW} ${IMG}
       MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
       # MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
@@ -70,31 +74,38 @@ while read PID; do
       
       if [ -f ${MASK} ]; then
         # bias correction --------------------------------------------------------------
-        N4BiasFieldCorrection -d 3 -i ${IMG} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_T2w.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_T2w.nii.gz] -v 1
+        echo "Running bias field correction with a mask"
+        N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
         # denoise ----------------------------------------------------------------------
-        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_T2w.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_T2w.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_T2w.nii.gz]
+        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
       else
         # bias correction --------------------------------------------------------------
-        N4BiasFieldCorrection -d 3 -i ${IMG} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_T2w.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_T2w.nii.gz] -v 1
+        echo "Running bias field correction without a mask"
+        N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+
         # denoise ----------------------------------------------------------------------
-        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_PREP}/${PIDSTR}_prep-biasN4_T2w.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_T2w.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_T2w.nii.gz]
+        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
         # intensity normalization to mean value of 3000
-        fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_T2w.nii.gz -inm 3000 ${DIR_PREP}/${PIDSTR}_prep-denoise_inm3000_T2w.nii.gz
+        fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -inm 3000 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
         # run RATS_MM to generate mask
         mkdir -p ${DIR_MASK}
-        RATS_MM -t 3000 -v 300 -k 5 ${DIR_PREP}/${PIDSTR}_prep-denoise_inm3000_T2w.nii.gz ${MASK}
+        RATS_MM -t 3000 -v 300 -k 5 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz ${MASK}
       fi
       
       # prepare to register allen to native ------------------------------------------
       mkdir -p ${DIR_ANAT}/native
-      IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_T2w-brain.nii.gz
+      IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
       ## this originally had it copying the uncorrected image to use, which doesn't make sense
-      # IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_T2w.nii.gz
+      # IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.nii.gz
       # cp ${IMG} ${IMG_NATIVE}
-      # cp ${DIR_PREP}/${PIDSTR}_T2w.png ${DIR_ANAT}/native/${PIDSTR}_T2w.png
+      # cp ${DIR_PREP}/${PIDSTR}_${MODALITY}.png ${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.png
 
-      fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_T2w.nii.gz -mas ${MASK} ${IMG_NATIVE}
+      fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
+      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_200um_${MODALITY}.nii.gz
 
+      3dresample -dxyz 0.2 0.2 0.2 \
+           -prefix  ${IMG_RESAMP} \
+           -input ${IMG_NATIVE}
       # mkdir -p ${DIR_ANAT}/reg_Allen
 
       ## this should be the same as the previous coregistrationChef
@@ -105,30 +116,30 @@ while read PID; do
         --write-composite-transform 1 \
         --collapse-output-transforms 0 \
         --initialize-transforms-per-stage 1 \
-        --transform Rigid[0.1] --metric Mattes[${FIXED},${IMG_NATIVE},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform Affine[0.1] --metric Mattes[${FIXED},${IMG_NATIVE},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_NATIVE},1,4] --masks [${FIXED_MASK},${MASK}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
+        --transform Rigid[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
+        --transform Affine[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
+        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_RESAMP},1,4] --masks [${FIXED_MASK},${MASK}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
         --winsorize-image-intensities [0.005,0.995] \
         --float 1 \
         --verbose 1 \
         --random-seed 15754459
       antsApplyTransforms -d 3 -n MultiLabel \
-        -i ${DIR_PROJECT}/template/P56_Annotation_downsample2.nii.gz \
+        -i ${ATLAS_LABELS} \
         -o ${DIR_LABEL}/${PIDSTR}_label-allen.nii.gz \
         -t ${XFM_INVERSE} \
-        -r ${IMG_NATIVE}
+        -r ${IMG_RESAMP}
     else 
     ## Haven't updated this bit yet, since I want to be able to see the naming of above
     # back propagate labels to native space ----------------------------------------
-    # XFM4="[${DIR_XFM}/${PIDSTR}_mod-T2w-brain_from-native_to-allen_xfm-affine.mat,1]"
-    # XFM3=${DIR_XFM}/${PIDSTR}_mod-T2w-brain_from-native_to-allen_xfm-syn+inverse.nii.gz
+    # XFM4="[${DIR_XFM}/${PIDSTR}_mod-${MODALITY}-brain_from-native_to-allen_xfm-affine.mat,1]"
+    # XFM3=${DIR_XFM}/${PIDSTR}_mod-${MODALITY}-brain_from-native_to-allen_xfm-syn+inverse.nii.gz
       echo "registration of ${PIDSTR} already done"
       mkdir -p ${DIR_ANAT}/label/allen
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${DIR_PROJECT}/template/P56_Annotation_downsample2.nii.gz \
         -o ${LABEL} \
         -t ${XFM_INVERSE} \
-        -r ${IMG_NATIVE}
+        -r ${IMG_RESAMP}
     fi
     3dROIstats -mask ${LABEL} -nzvoxels ${IMG_NATIVE} >>${DIR_PROJECT}/summary/volume_cohort2_VEF.tsv
   done < ${rawdata}/${PID}/sessions.tsv
