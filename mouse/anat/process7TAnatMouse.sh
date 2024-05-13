@@ -103,17 +103,14 @@ while read PID; do
       mkdir -p ${DIR_ANAT}/native
       mkdir -p ${DIR_XFM}
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
-      ## this originally had it copying the uncorrected image to use, which doesn't make sense
-      # IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.nii.gz
-      # cp ${IMG} ${IMG_NATIVE}
-      # cp ${DIR_PREP}/${PIDSTR}_${MODALITY}.png ${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.png
-
+      # currently set to use the denoised but not mean normalized version
       fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
       IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_200um_${MODALITY}.nii.gz
 
       3dresample -dxyz 0.2 0.2 0.2 \
            -prefix  ${IMG_RESAMP} \
            -input ${IMG_NATIVE}
+      
       # mkdir -p ${DIR_ANAT}/reg_Allen
       3dresample -dxyz 0.2 0.2 0.2 \
             -prefix ${MASK_RESAMP} \
@@ -138,6 +135,11 @@ while read PID; do
         -o ${DIR_LABEL}/${PIDSTR}_label-allen.nii.gz \
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
+      antsApplyTransforms -d 3 \
+        -i ${IMG_RESAMP} \
+        -o ${DIR_ANAT}/${PIDSTR}_reg_to_template.nii.gz \
+        -t ${XFM} \
+        -r ${FIXED}
     else 
     ## Haven't updated this bit yet, since I want to be able to see the naming of above
     # back propagate labels to native space ----------------------------------------

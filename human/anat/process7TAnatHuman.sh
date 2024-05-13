@@ -24,8 +24,8 @@ MODALITY=MPRAGE_T1
 ###################################################################################
 
 FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz
-ATLAS_LABELS=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
-FIXED_MASK=${FSLDIR}/data/atlases/MNI/MNI-maxprob-thr25-1mm.nii.gz
+ATLAS_LABELS=${FSLDIR}/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr0-1mm.nii.gz
+FIXED_MASK=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
 
 ISOTROPIC_RES=0.5
 
@@ -52,8 +52,8 @@ while read PID; do
     LABEL=${DIR_ANAT}/label/${PIDSTR}_label-allen.nii.gz
     
     mkdir -p ${DIR_ANAT}
-    XFM=${DIR_XFM}/reg_AllenComposite.h5
-    XFM_INVERSE=${DIR_XFM}/reg_AllenInverseComposite.h5
+    XFM=${DIR_XFM}/reg_templateComposite.h5
+    XFM_INVERSE=${DIR_XFM}/reg_templateInverseComposite.h5
     
     if [ ! -f ${XFM} ]; then
       echo "beginning registration ${PIDSTR}"
@@ -108,7 +108,7 @@ while read PID; do
       
       antsRegistration \
         --dimensionality 3 \
-        --output ${DIR_XFM}/reg_Allen \
+        --output ${DIR_XFM}/reg_template \
         --write-composite-transform 1 \
         --collapse-output-transforms 0 \
         --initialize-transforms-per-stage 1 \
@@ -122,13 +122,13 @@ while read PID; do
       
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ATLAS_LABELS} \
-        -o ${DIR_LABEL}/${PIDSTR}_label-allen.nii.gz \
+        -o ${DIR_LABEL}/${PIDSTR}_label-HarvardOxford.nii.gz \
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
     else 
     # back propagate labels to native space ----------------------------------------
       echo "registration of ${PIDSTR} already done"
-      mkdir -p ${DIR_ANAT}/label/allen
+      mkdir -p ${DIR_ANAT}/label/HarvardOxford
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ATLAS_LABELS} \
         -o ${LABEL} \
