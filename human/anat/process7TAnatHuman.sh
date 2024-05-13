@@ -24,13 +24,10 @@ MODALITY=MPRAGE_T1
 ###################################################################################
 
 FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz
-ATLAS_LABELS=${FSLDIR}/data/standard/WHS_0.5_Labels_LHRH_200um.nii.gz
-## need to check that this is a mask and not just a skull stripped brain
-FIXED_MASK=${FSLDIR}/data/atlases/MNI-maxprob-thr25-1mm.nii.gz
-# if [ -f "${derivatives}/${outputFilename}" ]; then
-#   rm "${derivatives}/${outputFilename}"
-# fi
-# touch "${derivatives}/${outputFilename}"
+ATLAS_LABELS=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
+FIXED_MASK=${FSLDIR}/data/atlases/MNI/MNI-maxprob-thr25-1mm.nii.gz
+
+ISOTROPIC_RES=0.5
 
 DIR_SUMMARY=${derivatives}/summary
 SUMMARY_FILE=${DIR_SUMMARY}/volumes.tsv
@@ -53,8 +50,7 @@ while read PID; do
     DIR_XFM=${DIR_ANAT}/xfm
     DIR_LABEL=${DIR_ANAT}/label
     LABEL=${DIR_ANAT}/label/${PIDSTR}_label-allen.nii.gz
-    # XFM4=${DIR_XFM}/reg_Allen0Warp.nii.gz
-    # XFM3=${DIR_XFM}/reg_Allen0InverseWarp.nii.gz
+    
     mkdir -p ${DIR_ANAT}
     XFM=${DIR_XFM}/reg_AllenComposite.h5
     XFM_INVERSE=${DIR_XFM}/reg_AllenInverseComposite.h5
@@ -62,64 +58,54 @@ while read PID; do
     if [ ! -f ${XFM} ]; then
       echo "beginning registration ${PIDSTR}"
 
-      # mkdir -p ${DIR_PREP}
       mkdir -p ${DIR_LABEL}
 
-      # gather raw images and remove extraneous BIDS flags ---------------------------
-      ## rewrite to include only run flag
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
-      # IMG=${DIR_PREP}/${PIDSTR}_${MODALITY}.nii.gz
-      # cp ${IMG_RAW} ${IMG}
-      MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
+      MASK=${DIR_MASK}/${PIDSTR}BrainExtractionMask.nii.gz
       # MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
       # cp ${O_MASK} ${MASK}
-      ################################################################################
-      # added a check for whether a mask has been generated
-      # runs RATS_MM after bf correction and denoising if no mask
-      ################################################################################
       
-      if [ -f ${MASK} ]; then
-        # bias correction --------------------------------------------------------------
-        echo "Running bias field correction with a mask"
-        N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
-        # denoise ----------------------------------------------------------------------
-        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
-      else
-        # bias correction --------------------------------------------------------------
-        echo "Running bias field correction without a mask"
-        N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
-
-        # denoise ----------------------------------------------------------------------
-        DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
-        # intensity normalization to mean value of 3000
-        fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -inm 3000 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
-        # run RATS_MM to generate mask
+      if [ ! -f ${MASK} ]; then
+        # run antsBrainExtraction script on data to generate a mask to use in BF correction
+        echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
-        bet ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz -m -R
+        antsBrainExtraction.sh -d 3 -a ${IMG_RAW} -e ${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz -m ${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz -o ${DIR_MASK}/${PIDSTR}
+        # bias correction --------------------------------------------------------------
+        # echo "Running bias field correction"
+        # N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+        # # denoise ----------------------------------------------------------------------
+        # DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
       fi
-      
+        
+      # bias correction --------------------------------------------------------------
+      echo "Running bias field correction"
+      N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+      # denoise ----------------------------------------------------------------------
+      DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
+      # N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+
+      # # denoise ----------------------------------------------------------------------
+      # DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
+      # # intensity normalization to mean value of 3000
+      # fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -inm 3000 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
+    
       # prepare to register allen to native ------------------------------------------
       mkdir -p ${DIR_ANAT}/native
       mkdir -p ${DIR_XFM}
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
-      ## this originally had it copying the uncorrected image to use, which doesn't make sense
-      # IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.nii.gz
-      # cp ${IMG} ${IMG_NATIVE}
-      # cp ${DIR_PREP}/${PIDSTR}_${MODALITY}.png ${DIR_ANAT}/native/${PIDSTR}_${MODALITY}.png
-
+      
       fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
       IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_200um_${MODALITY}.nii.gz
 
-      3dresample -dxyz 0.5 0.5 0.5 \
+      3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
            -prefix  ${IMG_RESAMP} \
            -input ${IMG_NATIVE}
-      # mkdir -p ${DIR_ANAT}/reg_Allen
-      3dresample -dxyz 0.5 0.5 0.5 \
+      
+      3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
             -prefix ${MASK_RESAMP} \
             -input ${MASK}
-      ## this should be the same as the previous coregistrationChef
-      ## note: I've set it to output to the ${DIR_XFM} folder, which is slightly different
+      
       antsRegistration \
         --dimensionality 3 \
         --output ${DIR_XFM}/reg_Allen \
@@ -133,16 +119,14 @@ while read PID; do
         --float 1 \
         --verbose 1 \
         --random-seed 15754459
+      
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ATLAS_LABELS} \
         -o ${DIR_LABEL}/${PIDSTR}_label-allen.nii.gz \
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
     else 
-    ## Haven't updated this bit yet, since I want to be able to see the naming of above
     # back propagate labels to native space ----------------------------------------
-    # XFM4="[${DIR_XFM}/${PIDSTR}_mod-${MODALITY}-brain_from-native_to-allen_xfm-affine.mat,1]"
-    # XFM3=${DIR_XFM}/${PIDSTR}_mod-${MODALITY}-brain_from-native_to-allen_xfm-syn+inverse.nii.gz
       echo "registration of ${PIDSTR} already done"
       mkdir -p ${DIR_ANAT}/label/allen
       antsApplyTransforms -d 3 -n MultiLabel \
