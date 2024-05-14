@@ -4,7 +4,7 @@ helpRequest() {
     [ "$#" -le "1" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
 }
 if helpRequest "$@"; then
-    echo "Usage: `basename $0` {rawdata} {derivatives} {outputFilename}"
+    echo "Usage: `basename $0` {rawdata} {derivatives}"
     echo "Performs preprocessing on anatomical data."
     echo "rawdata is the folder containing subject folders and participants.tsv"
     echo "derivatives is the folder where data is saved to."
@@ -16,7 +16,6 @@ scriptPath=`readlink -f $scriptPath`
 # DIR_PROJECT=/media/zjpeters/Samsung_T5/marcinkiewcz/dreaddFmri
 rawdata=$1
 derivatives=$2
-# outputFilename=${3:=volume.tsv}
 # add modality as an option later
 MODALITY=MPRAGE_T1
 ###################################################################################
@@ -24,7 +23,7 @@ MODALITY=MPRAGE_T1
 ###################################################################################
 
 FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz
-ATLAS_LABELS=${FSLDIR}/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr0-1mm.nii.gz
+ATLAS_LABELS=${FSLDIR}/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr50-1mm.nii.gz
 FIXED_MASK=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
 
 ISOTROPIC_RES=0.5
@@ -71,11 +70,6 @@ while read PID; do
         echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
         antsBrainExtraction.sh -d 3 -a ${IMG_RAW} -e ${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz -m ${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz -o ${DIR_MASK}/${PIDSTR}
-        # bias correction --------------------------------------------------------------
-        # echo "Running bias field correction"
-        # N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
-        # # denoise ----------------------------------------------------------------------
-        # DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
       fi
         
       # bias correction --------------------------------------------------------------
@@ -85,11 +79,6 @@ while read PID; do
       DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
       # N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
 
-      # # denoise ----------------------------------------------------------------------
-      # DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
-      # # intensity normalization to mean value of 3000
-      # fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -inm 3000 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
-    
       # prepare to register allen to native ------------------------------------------
       mkdir -p ${DIR_ANAT}/native
       mkdir -p ${DIR_XFM}
