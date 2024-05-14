@@ -48,7 +48,7 @@ while read PID; do
     DIR_MASK=${DIR_ANAT}/mask
     DIR_XFM=${DIR_ANAT}/xfm
     DIR_LABEL=${DIR_ANAT}/label
-    LABEL=${DIR_ANAT}/label/${PIDSTR}_label-allen.nii.gz
+    LABEL=${DIR_ANAT}/label/${PIDSTR}_label-HarvardOxford.nii.gz
     
     mkdir -p ${DIR_ANAT}
     XFM=${DIR_XFM}/reg_templateComposite.h5
@@ -62,9 +62,7 @@ while read PID; do
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}BrainExtractionMask.nii.gz
-      # MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
-      # cp ${O_MASK} ${MASK}
-      
+
       if [ ! -f ${MASK} ]; then
         # run antsBrainExtraction script on data to generate a mask to use in BF correction
         echo "Creating brain mask for subject"
@@ -111,7 +109,7 @@ while read PID; do
       
       antsApplyTransforms -d 3 -n MultiLabel \
         -i ${ATLAS_LABELS} \
-        -o ${DIR_LABEL}/${PIDSTR}_label-HarvardOxford.nii.gz \
+        -o ${LABEL} \
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
     else 
