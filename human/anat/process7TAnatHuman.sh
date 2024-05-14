@@ -83,7 +83,7 @@ while read PID; do
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
       
       fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
-      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_200um_${MODALITY}.nii.gz
+      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_${ISOTROPIC_RES}mm_${MODALITY}.nii.gz
 
       3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
            -prefix  ${IMG_RESAMP} \
@@ -122,7 +122,7 @@ while read PID; do
         -t ${XFM_INVERSE} \
         -r ${IMG_RESAMP}
     fi
-    3dROIstats -mask ${LABEL} -nzvoxels ${IMG_NATIVE} >>${DIR_SUMMARY}/volumes.tsv
+    3dROIstats -mask ${LABEL} -nzvoxels ${IMG_RESAMP} >>${DIR_SUMMARY}/volumes.tsv
   done < ${rawdata}/${PID}/sessions.tsv
 done < ${rawdata}/participants.tsv
 

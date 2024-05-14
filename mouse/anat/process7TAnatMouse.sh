@@ -26,7 +26,7 @@ FIXED=${scriptPath}/templates/WHS_0.5_T1w_200um.nii.gz
 ATLAS_LABELS=${scriptPath}/templates/WHS_0.5_Labels_LHRH_200um.nii.gz
 FIXED_MASK=${scriptPath}/templates/WHS_0.5_Labels_Brain_200um.nii.gz
 
-ISOTROPIC_RES=0.5
+ISOTROPIC_RES=0.2
 
 DIR_SUMMARY=${derivatives}/summary
 SUMMARY_FILE=${DIR_SUMMARY}/volumes.tsv
@@ -62,11 +62,12 @@ while read PID; do
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
-
+      IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_deoblique.nii.gz
+      3dWarp -deoblique -prefix ${IMG_DEOBLIQUE} ${IMG_RAW}
       if [ ! -f ${MASK} ]; then
         # bias correction --------------------------------------------------------------
         echo "Generating a whole brain mask for processing"
-        N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+        N4BiasFieldCorrection -d 3 -i ${IMG_DEOBLIQUE} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
         # denoise ----------------------------------------------------------------------
         DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
         # intensity normalization to mean value of 3000
@@ -77,7 +78,7 @@ while read PID; do
         rm ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz
       fi
       echo "Performing bias field correction"
-      N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+      N4BiasFieldCorrection -d 3 -i ${IMG_DEOBLIQUE} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
       # denoise ----------------------------------------------------------------------
       echo "Denoising image"
       DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
@@ -87,14 +88,14 @@ while read PID; do
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
       # currently set to use the denoised but not mean normalized version
       fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
-      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_200um_${MODALITY}.nii.gz
+      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_${ISOTROPIC_RES}mm_${MODALITY}.nii.gz
 
-      3dresample -dxyz 0.2 0.2 0.2 \
+      3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
            -prefix  ${IMG_RESAMP} \
            -input ${IMG_NATIVE}
       
       # mkdir -p ${DIR_ANAT}/reg_Allen
-      3dresample -dxyz 0.2 0.2 0.2 \
+      3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
             -prefix ${MASK_RESAMP} \
             -input ${MASK}
       ## this should be the same as the previous coregistrationChef
