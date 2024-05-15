@@ -62,12 +62,12 @@ while read PID; do
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}BrainExtractionMask.nii.gz
-
+      MASK_RESAMP=${DIR_MASK}/${PIDSTR}BrainExtractionMask_${ISOTROPIC_RES}mm.nii.gz
       if [ ! -f ${MASK} ]; then
         # run antsBrainExtraction script on data to generate a mask to use in BF correction
         echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
-        antsBrainExtraction.sh -d 3 -a ${IMG_RAW} -e ${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz -m ${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz -o ${DIR_MASK}/${PIDSTR}
+        antsBrainExtraction.sh -d 3 -a ${IMG_RAW} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
       fi
         
       # bias correction --------------------------------------------------------------
