@@ -22,7 +22,7 @@ MODALITY=MPRAGE_T1
 # need to update to a better naming for the template and mask
 ###################################################################################
 
-FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz
+FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain.nii.gz
 ATLAS_LABELS=${FSLDIR}/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr50-1mm.nii.gz
 FIXED_MASK=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
 
