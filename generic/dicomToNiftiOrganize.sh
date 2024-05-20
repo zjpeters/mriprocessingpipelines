@@ -53,6 +53,7 @@ dicomToNiftiOrganize() {
                     fi
                 done                
             fi
+            mv ${folder} ${sourcedata}/${subID}_${sesID}
         fi
     done
 } 
