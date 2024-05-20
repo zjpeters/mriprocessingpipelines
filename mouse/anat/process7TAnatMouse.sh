@@ -61,25 +61,55 @@ while read PID; do
 
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
+      IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_${MODALITY}_reorient.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
       MASK_RESAMP=${DIR_MASK}/${PIDSTR}_mask-brain_${ISOTROPIC_RES}mm.nii.gz
-      IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_deoblique.nii.gz
+      IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_${MODALITY}_deoblique.nii.gz
+      
+      IMG_RAI=${DIR_ANAT}/${PIDSTR}_RAI.nii.gz
+      # IMG_RIP=${DIR_ANAT}/${PIDSTR}_RIP.nii.gz
+      
+      # performs deobliquing and then sets orientation to match mouse
       3dWarp -deoblique -prefix ${IMG_DEOBLIQUE} ${IMG_RAW}
+      ORIENT_CODE=$(3dinfo -orient ${IMG_DEOBLIQUE})
+      echo $ORIENT_CODE
+      X=${ORIENT_CODE:0:1}
+      Y=${ORIENT_CODE:2:1}
+      if [[ "${ORIENT_CODE:1:1}" == "P" ]]; then
+        Z=A
+      elif [[ "${ORIENT_CODE:1:1}" == "A" ]]; then
+        Z=P
+      elif [[ "${ORIENT_CODE:1:1}" == "S" ]]; then
+        Z=I
+      elif [[ "${ORIENT_CODE:1:1}" == "I" ]]; then
+        Z=S
+      fi
+      # Z=${ORIENT_CODE:1:1}
+      NEW_CODE="${X}${Y}${Z}"
+      echo $NEW_CODE
+      3dresample -orient RAI -prefix ${IMG_RAI} -input ${IMG_DEOBLIQUE}
+      3dcopy ${IMG_RAI} ${IMG_REORIENT}
+      3drefit -orient ${NEW_CODE} ${IMG_REORIENT}
+
+      # 3dresample -orient RAI -input ${IMG_DEOBLIQUE} -prefix ${IMG_RAI}
+      # 3dcopy ${IMG_RAI} ${IMG_RIP}
+      # 3drefit -orient RIP ${IMG_RIP}
       if [ ! -f ${MASK} ]; then
         # bias correction --------------------------------------------------------------
         echo "Generating a whole brain mask for processing"
-        N4BiasFieldCorrection -d 3 -i ${IMG_DEOBLIQUE} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+        N4BiasFieldCorrection -d 3 -i ${IMG_REORIENT} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
         # denoise ----------------------------------------------------------------------
         DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
         # intensity normalization to mean value of 3000
         fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -inm 3000 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
         # run RATS_MM to generate mask
         mkdir -p ${DIR_MASK}
+        echo "Running RATS_MM on denoised image"
         RATS_MM -t 3000 -v 300 -k 5 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz ${MASK}
         rm ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz
       fi
       echo "Performing bias field correction"
-      N4BiasFieldCorrection -d 3 -i ${IMG_DEOBLIQUE} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+      N4BiasFieldCorrection -d 3 -i ${IMG_REORIENT} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
       # denoise ----------------------------------------------------------------------
       echo "Denoising image"
       DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
@@ -88,17 +118,18 @@ while read PID; do
       mkdir -p ${DIR_XFM}
       IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
       # currently set to use the denoised but not mean normalized version
-      fslmaths ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz -mas ${MASK} ${IMG_NATIVE}
       IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_${ISOTROPIC_RES}mm_${MODALITY}.nii.gz
 
       3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
            -prefix  ${IMG_RESAMP} \
-           -input ${IMG_NATIVE}
+           -input ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz
       
       # mkdir -p ${DIR_ANAT}/reg_Allen
       3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
             -prefix ${MASK_RESAMP} \
             -input ${MASK}
+      fslmaths ${IMG_RESAMP} -mas ${MASK_RESAMP} ${IMG_NATIVE}
+      
       ## this should be the same as the previous coregistrationChef
       ## note: I've set it to output to the ${DIR_XFM} folder, which is slightly different
       echo "Registering image to template space"
