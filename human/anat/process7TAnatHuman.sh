@@ -22,8 +22,8 @@ MODALITY=MPRAGE_T1
 # need to update to a better naming for the template and mask
 ###################################################################################
 
-FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain.nii.gz
-ATLAS_LABELS=${FSLDIR}/data/atlases/HarvardOxford/HarvardOxford-cort-maxprob-thr50-1mm.nii.gz
+FIXED=${FSLDIR}/data/standard/MNI152_T1_0.5mm.nii.gz
+ATLAS_LABELS=${FSLDIR}/data/atlases/Schaefer2018_200Parcels_17Networks_order_FSLMNI152_0.5mm.nii.gz
 FIXED_MASK=${FSLDIR}/data/standard/MNI152_T1_0.5mm_brain_mask.nii.gz
 
 ISOTROPIC_RES=0.5
@@ -48,7 +48,7 @@ while read PID; do
     DIR_MASK=${DIR_ANAT}/mask
     DIR_XFM=${DIR_ANAT}/xfm
     DIR_LABEL=${DIR_ANAT}/label
-    LABEL=${DIR_ANAT}/label/${PIDSTR}_label-HarvardOxford.nii.gz
+    LABEL=${DIR_ANAT}/label/${PIDSTR}_label-Schaefer200Parcels.nii.gz
     
     mkdir -p ${DIR_ANAT}
     XFM=${DIR_XFM}/reg_templateComposite.h5
@@ -61,18 +61,20 @@ while read PID; do
 
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
+      IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_prep-RPI_${MODALITY}.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}BrainExtractionMask.nii.gz
       MASK_RESAMP=${DIR_MASK}/${PIDSTR}BrainExtractionMask_${ISOTROPIC_RES}mm.nii.gz
+      3dresample -orient rpi -overwrite -prefix ${IMG_REORIENT} -input ${IMG_RAW}
       if [ ! -f ${MASK} ]; then
         # run antsBrainExtraction script on data to generate a mask to use in BF correction
         echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
-        antsBrainExtraction.sh -d 3 -a ${IMG_RAW} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
+        antsBrainExtraction.sh -d 3 -a ${IMG_REORIENT} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
       fi
         
       # bias correction --------------------------------------------------------------
       echo "Running bias field correction"
-      N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
+      N4BiasFieldCorrection -d 3 -i ${IMG_REORIENT} -x ${MASK} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
       # denoise ----------------------------------------------------------------------
       DenoiseImage -d 3 -n Rician -s 1 -p 1 -r 2 -v 1 -x ${MASK} -i ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz -o [${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz]
       # N4BiasFieldCorrection -d 3 -i ${IMG_RAW} -r 1 -s 4 -c [50x50x50x50,0.0] -b [50,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
@@ -99,9 +101,10 @@ while read PID; do
         --write-composite-transform 1 \
         --collapse-output-transforms 0 \
         --initialize-transforms-per-stage 1 \
+        --initial-moving-transform [${FIXED},${IMG_RESAMP},1] \
         --transform Rigid[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
         --transform Affine[0.1] --metric Mattes[${FIXED},${IMG_RESAMP},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_RESAMP},1,4] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
+        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_RESAMP},1,4] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [1000x500x250x100,1e-8,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
         --winsorize-image-intensities [0.005,0.995] \
         --float 1 \
         --verbose 1 \
