@@ -64,12 +64,19 @@ while read PID; do
       IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_prep-RPI_${MODALITY}.nii.gz
       MASK=${DIR_MASK}/${PIDSTR}BrainExtractionMask.nii.gz
       MASK_RESAMP=${DIR_MASK}/${PIDSTR}BrainExtractionMask_${ISOTROPIC_RES}mm.nii.gz
+      IMG_SMOOTH=${DIR_ANAT}/${PIDSTR}_prep-RPI_smooth_${MODALITY}.nii.gz
       3dresample -orient rpi -overwrite -prefix ${IMG_REORIENT} -input ${IMG_RAW}
+      
       if [ ! -f ${MASK} ]; then
         # run antsBrainExtraction script on data to generate a mask to use in BF correction
         echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
-        antsBrainExtraction.sh -d 3 -a ${IMG_REORIENT} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
+        sigma=1
+        IMG_SMOOTH_RESAMPLE=${DIR_ANAT}/${PIDSTR}_prep-RPI_smooth_${sigma}mm_${MODALITY}.nii.gz
+        fslmaths ${IMG_REORIENT} -s ${sigma} ${IMG_SMOOTH}
+        3dresample -dxyz 1 1 1 -prefix ${IMG_SMOOTH_RESAMPLE} -input ${IMG_SMOOTH}
+      
+        antsBrainExtraction.sh -d 3 -a ${IMG_SMOOTH_RESAMPLE} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
       fi
         
       # bias correction --------------------------------------------------------------
