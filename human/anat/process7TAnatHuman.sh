@@ -74,9 +74,9 @@ while read PID; do
         sigma=1
         IMG_SMOOTH_RESAMPLE=${DIR_ANAT}/${PIDSTR}_prep-RPI_smooth_${sigma}mm_${MODALITY}.nii.gz
         fslmaths ${IMG_REORIENT} -s ${sigma} ${IMG_SMOOTH}
-        3dresample -dxyz 1 1 1 -prefix ${IMG_SMOOTH_RESAMPLE} -input ${IMG_SMOOTH}
+        # 3dresample -dxyz 1 1 1 -prefix ${IMG_SMOOTH_RESAMPLE} -input ${IMG_SMOOTH}
       
-        antsBrainExtraction.sh -d 3 -a ${IMG_SMOOTH_RESAMPLE} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
+        antsBrainExtraction.sh -d 3 -a ${IMG_SMOOTH} -e ${FIXED} -m ${FIXED_MASK} -o ${DIR_MASK}/${PIDSTR}
       fi
         
       # bias correction --------------------------------------------------------------
