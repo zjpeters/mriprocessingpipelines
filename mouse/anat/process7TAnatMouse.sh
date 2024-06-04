@@ -27,7 +27,9 @@ ATLAS_LABELS=${scriptPath}/templates/WHS_0.5_Labels_LHRH_200um.nii.gz
 FIXED_MASK=${scriptPath}/templates/WHS_0.5_Labels_Brain_200um.nii.gz
 
 ISOTROPIC_RES=0.2
-
+tVal=3300
+vVal=340
+kVal=6
 DIR_SUMMARY=${derivatives}/summary
 SUMMARY_FILE=${DIR_SUMMARY}/volumes.tsv
 mkdir -p ${DIR_SUMMARY}
@@ -61,8 +63,8 @@ while read PID; do
 
       ## set image list (order of priority determined by MODLS and BIDS flags
       IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
-      MASK=${DIR_MASK}/${PIDSTR}_mask-brain.nii.gz
-      MASK_RESAMP=${DIR_MASK}/${PIDSTR}_mask-brain_${ISOTROPIC_RES}mm.nii.gz
+      MASK=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain.nii.gz
+      MASK_RESAMP=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain_${ISOTROPIC_RES}mm.nii.gz
       IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_${MODALITY}_deoblique.nii.gz
       
       IMG_RAI=${DIR_ANAT}/${PIDSTR}_RAI.nii.gz
@@ -106,7 +108,7 @@ while read PID; do
         # run RATS_MM to generate mask
         mkdir -p ${DIR_MASK}
         echo "Running RATS_MM on denoised image"
-        RATS_MM -t 3000 -v 300 -k 5 ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz ${MASK}
+        RATS_MM -t ${tVal} -v ${vVal} -k ${kVal} ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz ${MASK}
         rm ${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-denoise_${MODALITY}.nii.gz ${DIR_ANAT}/${PIDSTR}_prep-noise_${MODALITY}.nii.gz
       fi
       echo "Performing bias field correction"

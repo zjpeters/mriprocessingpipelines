@@ -71,7 +71,7 @@ while read PID; do
         # run antsBrainExtraction script on data to generate a mask to use in BF correction
         echo "Creating brain mask for subject"
         mkdir -p ${DIR_MASK}
-        sigma=1
+        sigma=1.5
         IMG_SMOOTH_RESAMPLE=${DIR_ANAT}/${PIDSTR}_prep-RPI_smooth_${sigma}mm_${MODALITY}.nii.gz
         fslmaths ${IMG_REORIENT} -s ${sigma} ${IMG_SMOOTH}
         # 3dresample -dxyz 1 1 1 -prefix ${IMG_SMOOTH_RESAMPLE} -input ${IMG_SMOOTH}
