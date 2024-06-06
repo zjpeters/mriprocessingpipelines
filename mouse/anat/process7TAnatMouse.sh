@@ -68,36 +68,35 @@ while read PID; do
       IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_${MODALITY}_deoblique.nii.gz
       
       IMG_RAI=${DIR_ANAT}/${PIDSTR}_RAI.nii.gz
-      # IMG_RIP=${DIR_ANAT}/${PIDSTR}_RIP.nii.gz
-      
-      # performs deobliquing and then sets orientation to match mouse
-      3dWarp -deoblique -prefix ${IMG_DEOBLIQUE} ${IMG_RAW}
-      ORIENT_CODE=$(3dinfo -orient ${IMG_DEOBLIQUE})
-      echo $ORIENT_CODE
-      X=${ORIENT_CODE:0:1}
-      Y=${ORIENT_CODE:2:1}
-      if [[ "${ORIENT_CODE:1:1}" == "P" ]]; then
-        Z=A
-      elif [[ "${ORIENT_CODE:1:1}" == "A" ]]; then
-        Z=P
-      elif [[ "${ORIENT_CODE:1:1}" == "S" ]]; then
-        Z=I
-      elif [[ "${ORIENT_CODE:1:1}" == "I" ]]; then
-        Z=S
-      fi
-      # Z=${ORIENT_CODE:1:1}
-      # NEW_CODE="${X}${Y}${Z}"
-      # echo $NEW_CODE
       NEW_ORIENT=LIP
       IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_${MODALITY}_${NEW_ORIENT}.nii.gz
-      3dresample -orient RAI -prefix ${IMG_RAI} -input ${IMG_DEOBLIQUE}
-      3dcopy ${IMG_RAI} ${IMG_REORIENT}
-      3drefit -orient ${NEW_ORIENT} ${IMG_REORIENT}
+      
 
       # 3dresample -orient RAI -input ${IMG_DEOBLIQUE} -prefix ${IMG_RAI}
       # 3dcopy ${IMG_RAI} ${IMG_RIP}
       # 3drefit -orient RIP ${IMG_RIP}
       if [ ! -f ${MASK} ]; then
+        # performs deobliquing and then sets orientation to match mouse
+        3dWarp -deoblique -prefix ${IMG_DEOBLIQUE} ${IMG_RAW}
+        ORIENT_CODE=$(3dinfo -orient ${IMG_DEOBLIQUE})
+        echo $ORIENT_CODE
+        X=${ORIENT_CODE:0:1}
+        Y=${ORIENT_CODE:2:1}
+        if [[ "${ORIENT_CODE:1:1}" == "P" ]]; then
+          Z=A
+        elif [[ "${ORIENT_CODE:1:1}" == "A" ]]; then
+          Z=P
+        elif [[ "${ORIENT_CODE:1:1}" == "S" ]]; then
+          Z=I
+        elif [[ "${ORIENT_CODE:1:1}" == "I" ]]; then
+          Z=S
+        fi
+        # Z=${ORIENT_CODE:1:1}
+        # NEW_CODE="${X}${Y}${Z}"
+        # echo $NEW_CODE
+        3dresample -orient RAI -prefix ${IMG_RAI} -input ${IMG_DEOBLIQUE}
+        3dcopy ${IMG_RAI} ${IMG_REORIENT}
+        3drefit -orient ${NEW_ORIENT} ${IMG_REORIENT}
         # bias correction --------------------------------------------------------------
         echo "Generating a whole brain mask for processing"
         N4BiasFieldCorrection -d 3 -i ${IMG_REORIENT} -r 1 -s 4 -c [50x50x50x50,0.0] -b [6,3] -t [0.15,0.01,200] -o [${DIR_ANAT}/${PIDSTR}_prep-biasN4_${MODALITY}.nii.gz,${DIR_ANAT}/${PIDSTR}_biasField_${MODALITY}.nii.gz] -v 1
