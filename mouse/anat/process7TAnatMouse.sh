@@ -54,23 +54,26 @@ while read PID; do
 
     XFM=${DIR_XFM}/reg_AllenComposite.h5
     XFM_INVERSE=${DIR_XFM}/reg_AllenInverseComposite.h5
+
+    ## set image list (order of priority determined by MODLS and BIDS flags
+    IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
+    MASK=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain.nii.gz
+    MASK_RESAMP=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain_${ISOTROPIC_RES}mm.nii.gz
+    IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_${MODALITY}_deoblique.nii.gz
     
+    IMG_RAI=${DIR_ANAT}/${PIDSTR}_RAI.nii.gz
+    NEW_ORIENT=LIP
+    IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_${MODALITY}_${NEW_ORIENT}.nii.gz
+    
+    IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
+    # currently set to use the denoised but not mean normalized version
+    IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_${ISOTROPIC_RES}mm_${MODALITY}.nii.gz    
     if [ ! -f ${XFM} ]; then
       echo "beginning registration ${PIDSTR}"
 
       # mkdir -p ${DIR_PREP}
       mkdir -p ${DIR_LABEL}
 
-      ## set image list (order of priority determined by MODLS and BIDS flags
-      IMG_RAW=${rawdata}/${DIRPID}/anat/${PIDSTR}_${MODALITY}.nii.gz
-      MASK=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain.nii.gz
-      MASK_RESAMP=${DIR_MASK}/${PIDSTR}_RATS_MM_t${tVal}_v${vVal}_k${kVal}_mask-brain_${ISOTROPIC_RES}mm.nii.gz
-      IMG_DEOBLIQUE=${DIR_ANAT}/${PIDSTR}_${MODALITY}_deoblique.nii.gz
-      
-      IMG_RAI=${DIR_ANAT}/${PIDSTR}_RAI.nii.gz
-      NEW_ORIENT=LIP
-      IMG_REORIENT=${DIR_ANAT}/${PIDSTR}_${MODALITY}_${NEW_ORIENT}.nii.gz
-      
 
       # 3dresample -orient RAI -input ${IMG_DEOBLIQUE} -prefix ${IMG_RAI}
       # 3dcopy ${IMG_RAI} ${IMG_RIP}
@@ -118,9 +121,6 @@ while read PID; do
       # prepare to register allen to native ------------------------------------------
       mkdir -p ${DIR_ANAT}/native
       mkdir -p ${DIR_XFM}
-      IMG_NATIVE=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain.nii.gz
-      # currently set to use the denoised but not mean normalized version
-      IMG_RESAMP=${DIR_ANAT}/${PIDSTR}_prep-denoise_${ISOTROPIC_RES}mm_${MODALITY}.nii.gz
 
       3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} \
            -prefix  ${IMG_RESAMP} \
