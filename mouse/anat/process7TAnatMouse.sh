@@ -1,10 +1,10 @@
 #!/bin/bash
 
 helpRequest() {
-    [ "$#" -le "1" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
+    [ "$#" -le "2" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
 }
 if helpRequest "$@"; then
-    echo "Usage: `basename $0` {rawdata} {derivatives}"
+    echo "Usage: `basename $0` {rawdata} {derivatives} {modality}"
     echo "Performs preprocessing on anatomical data."
     echo "rawdata is the folder containing subject folders and participants.tsv"
     echo "derivatives is the folder where data is saved to."
@@ -17,7 +17,7 @@ scriptPath=`readlink -f $scriptPath`
 rawdata=$1
 derivatives=$2
 # add modality as an option later
-MODALITY=FIESTA_0.2MM_ISO
+MODALITY=$3
 ###################################################################################
 # need to update to a better naming for the template and mask
 ###################################################################################
