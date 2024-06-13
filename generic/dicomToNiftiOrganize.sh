@@ -46,7 +46,7 @@ dicomToNiftiOrganize() {
                         modality=${modality//.json/}
                         case $modality in
                             *fiesta* | *mprage* | *t1* | *t2* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/anat/" ;;
-                            *fmri* | *func* | *rest* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/func/" ;;
+                            *fmri* | *func* | *rest* | *ps-vc*) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/func/" ;;
                             *dwi* | *dti* | *32dir* | *32_dir* ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/dwi/" ;;
                             * ) mv ${jsonFile//.json/}* "$rawdata/$subID/$sesID/other"
                         esac
