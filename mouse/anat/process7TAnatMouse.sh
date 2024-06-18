@@ -131,23 +131,23 @@ while read PID; do
             -prefix ${MASK_RESAMP} \
             -input ${MASK}
       fslmaths ${IMG_RESAMP} -mas ${MASK_RESAMP} ${IMG_NATIVE}
-      
+      IMG_INM=${DIR_ANAT}/native/${PIDSTR}_${MODALITY}-brain_inm.nii.gz
+      fslmaths ${IMG_NATIVE} -inm 2046 ${IMG_INM}
       ## this should be the same as the previous coregistrationChef
       ## note: I've set it to output to the ${DIR_XFM} folder, which is slightly different
       echo "Registering image to template space"
-      #--write-composite-transform 1 \
-      #--collapse-output-transforms 0 \
-      #--initialize-transforms-per-stage 1 \
+
       antsRegistration \
         --dimensionality 3 \
         --output ${DIR_XFM}/reg_Allen \
         --write-composite-transform 1 \
         --collapse-output-transforms 0 \
         --initialize-transforms-per-stage 1 \
+        --use-histogram-matching \
         --initial-moving-transform [${FIXED},${IMG_NATIVE},1] \
         --transform Rigid[0.1] --metric MI[${FIXED},${IMG_NATIVE},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
         --transform Affine[0.1] --metric MI[${FIXED},${IMG_NATIVE},1,32,Regular,0.25] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [2000x2000x2000x2000x2000,1e-6,10] --smoothing-sigmas 4x3x2x1x0vox --shrink-factors 8x8x4x2x1 \
-        --transform SyN[0.1,3,0] --metric CC[${FIXED},${IMG_NATIVE},1,4] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
+        --transform SyN[0.15,3,0] --metric CC[${FIXED},${IMG_NATIVE},1,4] --masks [${FIXED_MASK},${MASK_RESAMP}] --convergence [100x70x50x20,1e-6,10] --smoothing-sigmas 3x2x1x0vox --shrink-factors 8x4x2x1 \
         --winsorize-image-intensities [0.005,0.995] \
         --float 1 \
         --verbose 1 \
@@ -157,11 +157,11 @@ while read PID; do
         -o ${LABEL} \
         -t ${XFM_INVERSE} \
         -r ${IMG_NATIVE}
-      # antsApplyTransforms -d 3 \
-      #   -i ${IMG_RESAMP} \
-      #   -o ${DIR_ANAT}/${PIDSTR}_reg_to_template.nii.gz \
-      #   -t ${XFM} \
-      #   -r ${FIXED}
+      antsApplyTransforms -d 3 \
+        -i ${IMG_NATIVE} \
+        -o ${DIR_ANAT}/${PIDSTR}_reg_to_template.nii.gz \
+        -t ${XFM} \
+        -r ${FIXED}
     else 
     ## Haven't updated this bit yet, since I want to be able to see the naming of above
     # back propagate labels to native space ----------------------------------------
