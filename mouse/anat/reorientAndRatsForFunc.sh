@@ -98,6 +98,7 @@ while read PID sex; do
     # run RATS_MM to generate mask
     mkdir -p ${DIR_MASK}
     echo "Running RATS_MM on denoised image"
+    3dresample -dxyz 0.2 0.2 0.2 -prefix ${IMG_RESAMP} -input ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz
     RATS_MM -t ${tVal} -v ${vVal} -k ${kVal} ${DIR_ANAT}/${PIDSTR}_prep-denoise_inm3000_${MODALITY}.nii.gz ${MASK}
   done < ${rawdata}/${PID}/sessions.tsv
 done < ${rawdata}/participants.tsv
