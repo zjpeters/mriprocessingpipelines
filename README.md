@@ -36,6 +36,10 @@ Scripts to use with anatomical data
 Scripts to be used with DWI data
 4. `dwi/003_nonlinearDistortionCorrection.sh` - uses a t2w anatomical image (chosen because of intensity similarity) to correct for distortion as a result of the spin echo as well as run BET and DTIfit
 ## Functional MRI processing steps
+
+## TODO
+- move the /mouse/anat/template into the main /mouse folder and updates script dependencies to match
+
 # Useful links
 [Brain Imaging Data Structure (BIDS)](https://bids.neuroimaging.io/)
 
