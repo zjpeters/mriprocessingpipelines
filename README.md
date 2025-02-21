@@ -49,4 +49,6 @@ Scripts to be used with DWI data
 
 [Advanced Normalization Tools (ANTs)](http://stnava.github.io/ANTs/)
 
+[DSIStudio](https://dsi-studio.labsolver.org/download.html)
+
 [The Allen Software Development Kit (SDK)](https://allensdk.readthedocs.io/en/latest/)
