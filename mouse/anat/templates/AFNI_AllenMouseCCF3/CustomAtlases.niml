@@ -1,0 +1,24 @@
+<TEMPLATE_SPACE
+  space_name="AllenMouseCCF3"
+  generic_space_name="AllenMouseCCF3"
+  comment="Allen Mouse, originally 2017 distribution, modification from 2020
+          This version was brought into Slicer in nrrd format first and
+          exported from there. All coordinates were supplied in AFNI including
+          voxel resolution 0.025mm from the original paper, a division of 1000
+          from  Slicer NIFTI export info. All orientation was found by
+          observation. Left-right was guessed, although almost completely
+          symmetric. The center was found placed over the anterior commissure
+          in the atlas. The template was adjusted to correspond."
+></TEMPLATE_SPACE>
+<ATLAS
+  atlas_name="AllenMouseCCF3"
+  dset_name="AFNI_allen2020_atlas.nii.gz"
+  template_space="AllenMouseCCF3"
+  description="Allen Mouse Brain CCFv3 2020"
+  comment="Coordinates imposed in AFNI including left and right.
+        Please cite:
+        Wang Q, Ding SL, Li Y, et al. 
+        The Allen Mouse Brain Common Coordinate Framework: A 3D Reference Atlas.
+        Cell. 2020;181(4):936-953.e20. 
+        doi:10.1016/j.cell.2020.04.007"
+></ATLAS>
