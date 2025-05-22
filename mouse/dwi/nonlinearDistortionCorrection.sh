@@ -4,19 +4,19 @@ helpRequest() {
     [ "$#" -le "2" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
 }
 if helpRequest "$@"; then
-    echo "Usage: `basename $0` {imageLocation} {derivatives} {modality}"
-    echo "Performs preprocessing on anatomical data."
+    echo "Usage: `basename $0` {imageLocation} {derivatives}"
+    echo "Performs preprocessing on diffusion weighted imaging data."
     echo "rawdata is the folder containing subject folders and participants.tsv"
-    echo "derivatives is the folder where data is saved to."
-    echo "outputFilename is what you want to name your file, default is 'volume.tsv'"
+    echo "derivatives is the folder where data is output to."
+    echo "outputFilename is what you want to name your file"
     exit 0;
 fi
 scriptPath=`dirname $0`
 scriptPath=`readlink -f $scriptPath`
 
-rawdata=~/rdss_tnj/creativity/rawdata
-derivatives=~/rdss_tnj/creativity/derivatives
-sourcedata=~/rdss_tnj/creativity/sourcedata
+# rawdata=~/rdss_tnj/creativity/rawdata
+# derivatives=~/rdss_tnj/creativity/derivatives
+# sourcedata=~/rdss_tnj/creativity/sourcedata
 
 imageLocation=$1
 derivatives=$2
@@ -24,17 +24,18 @@ derivatives=$2
 #input files
 imageName=$(basename ${imageLocation})
 subID=${imageName%%_*}
-bvecsLocation=${imageLocation//.nii.gz/.bvecs}
-bvalsLocation=${imageLocation//.nii.gz/.bvals}
-maskLocation=${imageLocation//.nii.gz/_brain_mask.nii.gz}
-outputDir=${derivatives}/${subID}
-if [ ! -d ${outputDir} ]; then 
-    mkdir ${outputDir}
+bvecLocation="${imageLocation//.nii.gz/.bvec}"
+bvalLocation="${imageLocation//.nii.gz/.bval}"
+maskLocation="${imageLocation//.nii.gz/_mask.nii.gz}"
+outputDir="${derivatives}/${subID}"
+if [ ! -d "${outputDir}" ]; then 
+    mkdir "${outputDir}"
 fi
 
+outputBaseName="${outputDir}/${imageName%%.nii.gz}"
 # output files
-b0Image=
-bfCorrImage=
+b0Image="${outputBaseName}"_b0.nii.gz
+bfCorrImage="${outputBaseName}"_bf_corr.nii.gz
 
 if [ ! -f ${imageLocation} ]; then
     echo "${imageLocation} does not exist"
@@ -43,36 +44,37 @@ elif [ -f ${b0Nonlin}.nii.gz ]; then
     echo "processing has already been run for ${subID}"
     continue
 else
-    xDim=$(fslval ${imageLocation} dim1)
-    yDim=$(fslval ${imageLocation} dim2)
-    zDim=$(fslval ${imageLocation} dim3)
-    tDim=$(fslval ${imageLocation} dim4)
+    bval=$(cat ${bvalLocation})
+    xDim=$(fslval "${imageLocation}" dim1)
+    yDim=$(fslval "${imageLocation}" dim2)
+    zDim=$(fslval "${imageLocation}" dim3)
+    tDim=$(fslval "${imageLocation}" dim4)
 
     nb0s=0
-    for i in $bvals; do
-    if [ $i == 0 ]; then
-        ((nb0s++))
-    fi
+    for i in $bval; do
+        if [ $i == 0 ]; then
+            ((nb0s++))
+        fi
     done
     # need to first check if image has even number of slices in each direction
     if [ $((xDim%2)) != 0 ]; then
-    ((xDim--))
+        ((xDim--))
     fi
     if [ $((yDim%2)) != 0 ]; then
-    ((yDim--))
+        ((yDim--))
     fi
     if [ $((zDim%2)) != 0 ]; then
-    ((zDim--))
+        ((zDim--))
     fi
 
-    resampleDwi=${derivatives}/${participant_id}/${participant_id}_${session_id}_dwi_resampled.nii.gz
-    dtiFitOutput=${derivatives}/${participant_id}/${participant_id}_${session_id}_dwi_nonlin_proc
-    3dresample -dxyz 2 2 2 -input ${dwiFor} -prefix ${resampleDwi} 
+    resampleDwi=${outputBaseName}_resampled.nii.gz
+    dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
+    # resample input image to 200um
+    3dresample -dxyz 0.2 0.2 0.2 -input "${dwiFor}" -prefix "${resampleDwi}" 
     # shouldn't need an if statement, since it's a good idea to make sure they all go through the same process anyway
 #    if [ $((xDim%2)) != 0 ] || [ $((yDim%2)) != 0 ] || [ $((zDim%2)) != 0 ]; then
-    fslroi ${imageLocation} ${b0Image} 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 1
-    fslroi $resampleDwi $croppeddwi 0 $xDim 0 $yDim 0 $zDim 0 $tDim
-    fslroi $croppeddwi $b0For 0 $xDim 0 $yDim 0 $zDim 0 $nb0s
+    fslroi "${resampleDwi}" "${b0Image}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${nb0s}
+    fslroi "${resampleDwi}" "${resampleDwi}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${tDim}
 
 
 
@@ -131,7 +133,7 @@ else
 
     resampleDwi=${derivatives}/${participant_id}/${participant_id}_${session_id}_dwi_resampled.nii.gz
     dtiFitOutput=${derivatives}/${participant_id}/${participant_id}_${session_id}_dwi_nonlin_proc
-    3dresample -dxyz 2 2 2 -input ${dwiFor} -prefix ${resampleDwi} 
+    3dresample -dxyz 0.2 0.2 0.2 -input ${dwiFor} -prefix ${resampleDwi} 
     # shouldn't need an if statement, since it's a good idea to make sure they all go through the same process anyway
 #    if [ $((xDim%2)) != 0 ] || [ $((yDim%2)) != 0 ] || [ $((zDim%2)) != 0 ]; then
     fslroi $resampleDwi $croppeddwi 0 $xDim 0 $yDim 0 $zDim 0 $tDim
