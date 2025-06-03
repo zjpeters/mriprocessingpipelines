@@ -1,7 +1,7 @@
 #!/bin/bash
 
 helpRequest() {
-    [ "$#" -le "2" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
+    [ "$#" -ne "2" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
 }
 if helpRequest "$@"; then
     echo "Usage: `basename $0` {imageLocation} {derivatives}"
@@ -36,7 +36,7 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
 # output files
 b0Image="${outputBaseName}"_b0.nii.gz
 bfCorrImage="${outputBaseName}"_bf_corr.nii.gz
-
+b0Mean="${outputBaseName}"_b0_mean.nii.gz
 if [ ! -f ${imageLocation} ]; then
     echo "${imageLocation} does not exist"
     continue
@@ -45,10 +45,10 @@ elif [ -f ${b0Nonlin}.nii.gz ]; then
     continue
 else
     bval=$(cat ${bvalLocation})
-    xDim=$(fslval "${imageLocation}" dim1)
-    yDim=$(fslval "${imageLocation}" dim2)
-    zDim=$(fslval "${imageLocation}" dim3)
-    tDim=$(fslval "${imageLocation}" dim4)
+    # xDim=$(fslval "${imageLocation}" dim1)
+    # yDim=$(fslval "${imageLocation}" dim2)
+    # zDim=$(fslval "${imageLocation}" dim3)
+    # tDim=$(fslval "${imageLocation}" dim4)
 
     nb0s=0
     for i in $bval; do
@@ -56,27 +56,33 @@ else
             ((nb0s++))
         fi
     done
-    # need to first check if image has even number of slices in each direction
-    if [ $((xDim%2)) != 0 ]; then
-        ((xDim--))
-    fi
-    if [ $((yDim%2)) != 0 ]; then
-        ((yDim--))
-    fi
-    if [ $((zDim%2)) != 0 ]; then
-        ((zDim--))
-    fi
+    # # need to first check if image has even number of slices in each direction
+    # if [ $((xDim%2)) != 0 ]; then
+    #     ((xDim--))
+    # fi
+    # if [ $((yDim%2)) != 0 ]; then
+    #     ((yDim--))
+    # fi
+    # if [ $((zDim%2)) != 0 ]; then
+    #     ((zDim--))
+    # fi
 
     resampleDwi=${outputBaseName}_resampled.nii.gz
     dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
     # resample input image to 200um
-    3dresample -dxyz 0.2 0.2 0.2 -input "${dwiFor}" -prefix "${resampleDwi}" 
+    3dresample -dxyz 0.2 0.2 0.2 -input "${imageLocation}" -prefix "${resampleDwi}" 
     # shouldn't need an if statement, since it's a good idea to make sure they all go through the same process anyway
 #    if [ $((xDim%2)) != 0 ] || [ $((yDim%2)) != 0 ] || [ $((zDim%2)) != 0 ]; then
-    fslroi "${resampleDwi}" "${b0Image}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${nb0s}
-    fslroi "${resampleDwi}" "${resampleDwi}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${tDim}
+    3dTsplit4D -prefix ${outputBaseName}_volume.nii.gz "${resampleDwi}"
+    3dTcat -prefix "${b0Image}" ${outputBaseName}_volume.00.nii.gz ${outputBaseName}_volume.01.nii.gz
+    rm ${outputBaseName}_volume*.nii.gz
 
-
+    # fslroi "${resampleDwi}" "${b0Image}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${nb0s}
+    # fslroi "${resampleDwi}" "${resampleDwi}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${tDim}
+    echo $b0Mean
+    3dTstat -prefix "${b0Mean}" "${b0Image}"
+fi
+exit 1
 
 ### old code below
 dwiFor=${rawdata}/${participant_id}/dwi/${participant_id}_${session_id}_DTI-30_DIRECTIONS.nii.gz
