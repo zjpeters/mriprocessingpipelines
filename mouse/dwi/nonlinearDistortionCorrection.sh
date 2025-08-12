@@ -20,13 +20,17 @@ scriptPath=`readlink -f $scriptPath`
 
 imageLocation=$1
 derivatives=$2
-
+ISOTROPIC_RES=0.2
 #input files
 imageName=$(basename ${imageLocation})
 subID=${imageName%%_*}
 bvecLocation="${imageLocation//.nii.gz/.bvec}"
 bvalLocation="${imageLocation//.nii.gz/.bval}"
-maskLocation="${imageLocation//.nii.gz/_mask.nii.gz}"
+maskImage="${imageLocation//.nii.gz/_mask.nii.gz}"
+###
+# 
+###
+maskResampled="${imageLocation//.nii.gz/_mask_resampled.nii.gz}"
 outputDir="${derivatives}/${subID}"
 if [ ! -d "${outputDir}" ]; then 
     mkdir "${outputDir}"
@@ -70,7 +74,8 @@ else
     resampleDwi=${outputBaseName}_resampled.nii.gz
     dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
     # resample input image to 200um
-    3dresample -dxyz 0.2 0.2 0.2 -input "${imageLocation}" -prefix "${resampleDwi}" 
+    3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} -input "${imageLocation}" -prefix "${resampleDwi}" 
+    3dresample -master "${resampleDwi}" -input "${maskImage}" -prefix "${maskResampled}"
     # shouldn't need an if statement, since it's a good idea to make sure they all go through the same process anyway
 #    if [ $((xDim%2)) != 0 ] || [ $((yDim%2)) != 0 ] || [ $((zDim%2)) != 0 ]; then
     3dTsplit4D -prefix ${outputBaseName}_volume.nii.gz "${resampleDwi}"
