@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 helpRequest() {
     [ "$#" -ne "2" ] || [ "$1" = '-h' ] || [ "$1" = '-help' ]
