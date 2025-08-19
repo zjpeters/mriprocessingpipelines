@@ -88,6 +88,7 @@ else
     -b [100,3] \
     -t [0.3,0.01,200] \
     -x ${maskResampled }
+    # adding denoising
 fi
 exit 1
 
