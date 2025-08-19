@@ -40,6 +40,7 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
 # output files
 b0Image="${outputBaseName}"_b0.nii.gz
 bfCorrImage="${outputBaseName}"_bf_corr.nii.gz
+bfImage="${outputBaseName}"_bf.nii.gz
 b0Mean="${outputBaseName}"_b0_mean.nii.gz
 if [ ! -f ${imageLocation} ]; then
     echo "${imageLocation} does not exist"
@@ -86,6 +87,13 @@ else
     # fslroi "${resampleDwi}" "${resampleDwi}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${tDim}
     echo $b0Mean
     3dTstat -prefix "${b0Mean}" "${b0Image}"
+    N4BiasFieldCorrection -d 3 \
+    -i "${b0Mean}" \
+    -o [${bfCorrImage},${bfImage}] \
+    -b [100,3] \
+    -t [0.3,0.01,200] \
+    -x ${maskResampled }
+    # adding denoising
 fi
 exit 1
 
