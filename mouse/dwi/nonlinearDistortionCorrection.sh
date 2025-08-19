@@ -42,6 +42,9 @@ b0Image="${outputBaseName}"_b0.nii.gz
 bfCorrImage="${outputBaseName}"_bf_corr.nii.gz
 bfImage="${outputBaseName}"_bf.nii.gz
 b0Mean="${outputBaseName}"_b0_mean.nii.gz
+resampleDwi=${outputBaseName}_resampled.nii.gz
+dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
+bfMeanCorrImage="${outputBaseName}"_bf_mean_corr.nii.gz
 if [ ! -f ${imageLocation} ]; then
     echo "${imageLocation} does not exist"
     continue
@@ -72,8 +75,7 @@ else
     #     ((zDim--))
     # fi
 
-    resampleDwi=${outputBaseName}_resampled.nii.gz
-    dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
+   
     # resample input image to 200um
     3dresample -dxyz ${ISOTROPIC_RES} ${ISOTROPIC_RES} ${ISOTROPIC_RES} -input "${imageLocation}" -prefix "${resampleDwi}" 
     3dresample -master "${resampleDwi}" -input "${maskImage}" -prefix "${maskResampled}"
@@ -83,16 +85,21 @@ else
     3dTcat -prefix "${b0Image}" ${outputBaseName}_volume.00.nii.gz ${outputBaseName}_volume.01.nii.gz
     rm ${outputBaseName}_volume*.nii.gz
 
-    # fslroi "${resampleDwi}" "${b0Image}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${nb0s}
-    # fslroi "${resampleDwi}" "${resampleDwi}" 0 ${xDim} 0 ${yDim} 0 ${zDim} 0 ${tDim}
     echo $b0Mean
     3dTstat -prefix "${b0Mean}" "${b0Image}"
     N4BiasFieldCorrection -d 3 \
-    -i "${b0Mean}" \
-    -o [${bfCorrImage},${bfImage}] \
-    -b [100,3] \
-    -t [0.3,0.01,200] \
-    -x ${maskResampled }
+        -i "${b0Mean}" \
+        -o [${bfMeanCorrImage},${bfImage}] \
+        -b [100,3] \
+        -t [0.3,0.01,200] \
+        -x ${maskResampled}
+
+    #removing bf
+    3dcalc -a "${resampleDwi}" \
+        -b "${bfImage}" \
+        -expr a/b \
+        -prefix "${bfCorrImage}"
+
     # adding denoising
 fi
 exit 1
