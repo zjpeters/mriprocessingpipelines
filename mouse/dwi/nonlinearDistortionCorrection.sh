@@ -45,6 +45,8 @@ b0Mean="${outputBaseName}"_b0_mean.nii.gz
 resampleDwi=${outputBaseName}_resampled.nii.gz
 dtiFitOutput=${outputBaseName}_dwi_nonlin_proc
 bfMeanCorrImage="${outputBaseName}"_bf_mean_corr.nii.gz
+denoisedresDwi="${outputBaseName}"_resampleDwi_denoised.nii.gz
+
 if [ ! -f ${imageLocation} ]; then
     echo "${imageLocation} does not exist"
     continue
@@ -101,6 +103,17 @@ else
         -prefix "${bfCorrImage}"
 
     # adding denoising
+    DenoiseImage -d 3 \
+        -i "${resampleDwi}" \
+        -o "${denoisedresDwi}" \
+        -n Rician \
+        -x "${maskResampled}" \
+        -s 1 \
+        -p 1 \
+        -r 1 \
+        -v 1
+
+    
 fi
 exit 1
 
