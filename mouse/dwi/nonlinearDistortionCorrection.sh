@@ -104,7 +104,7 @@ else
         -prefix "${bfCorrImage}"
 
     # adding denoising
-    DenoiseImage -d 3 \
+    DenoiseImage -d 4 \
         -i "${bfCorrImage}" \
         -o "${denoisedbfCorrImage}" \
         -n Rician \
