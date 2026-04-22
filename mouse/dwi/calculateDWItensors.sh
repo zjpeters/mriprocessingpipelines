@@ -13,6 +13,8 @@ if helpRequest "$@"; then
 fi
 scriptPath=`dirname $0`
 scriptPath=`readlink -f $scriptPath`
+imageLocation=$1
+derivatives=$2
 
 #input files
     imageName=$(basename ${imageLocation})
@@ -20,6 +22,7 @@ scriptPath=`readlink -f $scriptPath`
     bvecLocation="${imageLocation//.nii.gz/.bvec}"
     bvalLocation="${imageLocation//.nii.gz/.bval}"
     maskImage="${imageLocation//.nii.gz/_mask.nii.gz}"
+    ### this should already be defined by image location
     dwiImage="${imageLocation//.nii.gz/_dwi.nii.gz}"
 
 
@@ -32,6 +35,7 @@ if [ ! -d "${outputDir}" ]; then
 fi
 
 outputBaseName="${outputDir}/${imageName%%.nii.gz}"
+### most of the lines below assume there is no _dwi in the filename
 # output files
     bmatrix="${outputBaseName}".matA.dat
     dwiBRIKHEAD="${outputBaseName}"_dwi
@@ -50,15 +54,18 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
         -in_bvals     "${bvalLocation}" \
         -out_col_matA "${bmatrix}" \
         -flip_y
-
+echo "b matrix created"
 
 #convert nii.gz to BRIK HEAD format:
-    3dcopy "${dwiImage}" "${dwiBRIKHEAD}"
+    # changed dwiImage to imageLocation
+    3dcopy "${imageLocation}" "${dwiBRIKHEAD}"
     3dcopy "${maskImage}" "${maskBRIKHEAD}"
+echo "image and mask convered to BRIK HEAD"
 
 #Correct Eddy Distortions
     3dAllineate -base "${dwiBRIKHEAD}+orig.HEAD[0]" -input "${dwiBRIKHEAD}+orig.HEAD" \
     -prefix "${alignedDwi}" -cost mutualinfo -verb -EPI
+echo "Eddy current correction finished"
 
 #Bias Field correction 
     N4BiasFieldCorrection \
@@ -67,6 +74,7 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
         -o "${alignedDwiBFcorr}" \
         -x "${maskImage}" \
         -v 1
+echo "Bias field correction completed"
 
 # adding denoising
     DenoiseImage -d 3 \
@@ -78,14 +86,14 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
         -p 1 \
         -r 1 \
         -v 1
-
+echo "Denoising completed"
 
 #calculate Diffusion Tensor
     3dDWItoDT -prefix "${tensorOutput}" \
         -mask "${maskBRIKHEAD}+orig.BRIK.gz" \
         -reweight -eigs \
         -bmatrix_FULL "${bmatrix}" "${alignedDwiBFcorrDenoised}"
-
+echo "Diffusion tensors calculated"
 
 #visualize DTI Data in AFNI
     3dcalc -prefix "${dtiOut}" -a "${tensorOutput}[9..11]" -c "${tensorOutput}[18]" -expr 'c*STEP(c-0.25)*255*ABS(a)'
