@@ -13,6 +13,7 @@ if helpRequest "$@"; then
 fi
 scriptPath=`dirname $0`
 scriptPath=/Users/sophieborghoff/Documents/MDthesis/mriprocessingpipelines/mouse/anat
+
 echo $scriptPath
 scriptPath=`readlink -f $scriptPath`
 
@@ -29,8 +30,8 @@ outputBaseName="${outputDir}/${imageName%%.nii.gz}"
     subID=${imageName%%_*}
     IMG_NATIVE="${outputBaseName}"_bf_corrected_denoised.nii.gz
     echo $IMG_NATIVE
-    dtiOut="${outputBaseName}"_DTI
-    dtiColor="${outputBaseName}"_DTIColorMap
+    dtiOut="${outputBaseName}"_DTI.nii.gz
+    dtiColor="${outputBaseName}"_DTIColorMap_rgb.nii.gz
    
 ###
 XFMdir="${derivatives}/${subID}/XFM"
@@ -42,6 +43,8 @@ XFMBaseName="${XFMdir}/${imageName%%.nii.gz}"
 
 LABEL=${XFMBaseName}_label-allen.nii.gz
 REG_IMG=${XFMBaseName}_reg_to_template.nii.gz
+REG_DTI=${XFMBaseName}_reg_to_template_dti.nii.gz
+REG_Color=${XFMBaseName}_reg_to_template_Color.nii.gz
 
     XFM=${XFMdir}/reg_AllenComposite.h5
     XFM_INVERSE=${XFMdir}/reg_AllenInverseComposite.h5
@@ -82,13 +85,20 @@ antsApplyTransforms -d 4 \
         -o ${REG_IMG} \
         -t ${XFM} \
         -r ${FIXED} --verbose 1
+
+#making dtiOut 4-dimensional
+dti4d="${outputBaseName}_DTI_4d.nii.gz"
+3dTcat -prefix "${dti4d}" \
+     "${dtiOut}"
+#3dAFNItoNIFTI -prefix "${dti4d}.nii.gz" "${dti4d}+orig"
+
 antsApplyTransforms -d 4 \
-        -i ${dtiOut} \
-        -o ${REG_IMG} \
+        -i ${dti4d} \
+        -o ${REG_DTI} \
         -t ${XFM} \
         -r ${FIXED} --verbose 1
 antsApplyTransforms -d 3 \
         -i ${dtiColor} \
-        -o ${REG_IMG} \
+        -o ${REG_Color} \
         -t ${XFM} \
         -r ${FIXED} --verbose 1
