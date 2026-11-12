@@ -30,20 +30,22 @@ derivatives=$2
 # 
 ###
 outputDir="${derivatives}/${subID}"
-if [ ! -d "${outputDir}" ]; then 
-    mkdir "${outputDir}"
-fi
+#if [ ! -d "${outputDir}" ]; then 
+ #   mkdir "${outputDir}"
+#fi
 
 outputBaseName="${outputDir}/${imageName%%.nii.gz}"
+denoisedbfCorrImage="${outputBaseName}"_bf_corrected_denoised.nii.gz
+maskResampled="${outputBaseName}"_mask_resampled.nii.gz
 ### most of the lines below assume there is no _dwi in the filename
 # output files
     bmatrix="${outputBaseName}".matA.dat
     dwiBRIKHEAD="${outputBaseName}"_dwi
-    maskBRIKHEAD="${outputBaseName}"_dwi_mask
-    alignedDwi="${outputBaseName}"_dwi_al
-    alignedDwiBFcorr="${outputBaseName}"_dwi_al_bf_corr.nii.gz
-    alignedDwiBFcorrDenoised="${outputBaseName}"_dwi_al_bf_corr_denoised.nii.gz
-    tensorOutput="${outputBaseName}"_tensors.nii.gz
+    maskBRIKHEAD="${outputBaseName}"_mask
+    alignedDwi="${outputBaseName}"_al
+    alignedDwiBFcorr="${outputBaseName}"_al_bf_corr.nii.gz
+    alignedDwiBFcorrDenoised="${outputBaseName}"_al_bf_corr_denoised.nii.gz
+    tensorOutput="${outputBaseName}"_tensors
     dtiOut="${outputBaseName}"_DTI
     dtiColor="${outputBaseName}"_DTIColorMap
 
@@ -58,47 +60,49 @@ echo "b matrix created"
 
 #convert nii.gz to BRIK HEAD format:
     # changed dwiImage to imageLocation
-    3dcopy "${imageLocation}" "${dwiBRIKHEAD}"
-    3dcopy "${maskImage}" "${maskBRIKHEAD}"
+    3dcopy "${denoisedbfCorrImage}" "${dwiBRIKHEAD}"
+    3dcopy "${maskResampled}" "${maskBRIKHEAD}"
 echo "image and mask convered to BRIK HEAD"
 
 #Correct Eddy Distortions
-    3dAllineate -base "${dwiBRIKHEAD}+orig.HEAD[0]" -input "${dwiBRIKHEAD}+orig.HEAD" \
-    -prefix "${alignedDwi}" -cost mutualinfo -verb -EPI
+    # 3dAllineate -base "${dwiBRIKHEAD}+orig.HEAD[0]" -input "${dwiBRIKHEAD}+orig.HEAD" \
+    # -prefix "${alignedDwi}" -cost mutualinfo -verb -EPI
 echo "Eddy current correction finished"
 
+
 #Bias Field correction 
-    N4BiasFieldCorrection \
-        -d 3 \
-        -i "${alignedDwi}" \
-        -o "${alignedDwiBFcorr}" \
-        -x "${maskImage}" \
-        -v 1
-echo "Bias field correction completed"
+  #  N4BiasFieldCorrection \
+   #     -d 3 \
+    #    -i "${alignedDwi}" \
+     #   -o "${alignedDwiBFcorr}" \
+      #  -x "${maskImage}" \
+       # -v 1
+#echo "Bias field correction completed"
 
 # adding denoising
-    DenoiseImage -d 3 \
-        -i "${alignedDwiBFcorr}" \
-        -o "${alignedDwiBFcorrDenoised}" \
-        -n Rician \
-        -x "${maskImage}" \
-        -s 1 \
-        -p 1 \
-        -r 1 \
-        -v 1
-echo "Denoising completed"
+ #   DenoiseImage -d 3 \
+  #      -i "${alignedDwiBFcorr}" \
+   #     -o "${alignedDwiBFcorrDenoised}" \
+    #    -n Rician \
+     #   -x "${maskImage}" \
+      #  -s 1 \
+       # -p 1 \
+        #-r 1 \
+        #-v 1
+#echo "Denoising completed"
 
 #calculate Diffusion Tensor
     3dDWItoDT -prefix "${tensorOutput}" \
         -mask "${maskBRIKHEAD}+orig.BRIK.gz" \
         -reweight -eigs \
-        -bmatrix_FULL "${bmatrix}" "${alignedDwiBFcorrDenoised}"
+        -bmatrix_FULL "${bmatrix}" "${dwiBRIKHEAD}+orig.HEAD" #"${alignedDwi}+orig"
 echo "Diffusion tensors calculated"
+# 3dAFNItoNIFTI -prefix "${outputBaseName}"_test.nii.gz "${tensorOutput}+orig"
 
 #visualize DTI Data in AFNI
-    3dcalc -prefix "${dtiOut}" -a "${tensorOutput}[9..11]" -c "${tensorOutput}[18]" -expr 'c*STEP(c-0.25)*255*ABS(a)'
-    3dThreetoRGB -prefix "${dtiColor}"-anat "${dtiOut}+orig.[0]" "${dtiOut}+orig.[1]" "${dtiOut}+orig.[2]"
-    afni
+    3dcalc -prefix "${dtiOut}" -a "${tensorOutput}+orig[9..11]" -c "${tensorOutput}+orig[18]" -expr 'c*STEP(c)*255*ABS(a)'
+    3dThreetoRGB -prefix "${dtiColor}" "${dtiOut}+orig.[0]" "${dtiOut}+orig.[1]" "${dtiOut}+orig.[2]"
+    #afni
 
 
 # Convert DTI color map to NIfTI for compatibility with ITK snap
